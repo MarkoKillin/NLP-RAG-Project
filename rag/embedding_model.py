@@ -6,7 +6,6 @@ class EmbeddingModel:
     def __init__(self, model_name: str = "nomic-embed-text", base_url: str = "http://ollama:11434"):
         self.model_name = model_name
         self.base_url = base_url.rstrip("/")
-        # dimension is not returned explicitly; you can infer after first call
         self.dimension = None
 
     def encode(self, texts: list[str]) -> np.ndarray:

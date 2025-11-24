@@ -8,13 +8,11 @@ INDEX_DIR = BASE_DIR / "index" / "lucene_index"
 CHUNK_SIZE = 400
 CHUNK_OVERLAP = 50 
 
-TOP_K = 5  # number of chunks to retrieve
+TOP_K = 5 
 
 EMBEDDING_MODEL_NAME = "nomic-embed-text"
 EMBEDDING_DIM = 768
 
-import os
-
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL_NAME = os.getenv("OLLAMA_MODEL_NAME", "mistral")
+OLLAMA_BASE_URL = "http://ollama:11434/v1"
+OLLAMA_MODEL_NAME = "mistral"
 

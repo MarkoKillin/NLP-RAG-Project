@@ -1,89 +1,85 @@
-from typing import Literal, Any
+# rag/pydantic_rag_agent.py
+
+from typing import Literal
 from pathlib import Path
 
-from rag.config import INDEX_DIR, TOP_K, EMBEDDING_MODEL_NAME, OLLAMA_MODEL_NAME, OLLAMA_BASE_URL
-from rag.retriever import LuceneBM25Retriever, LuceneVectorRetriever, RetrievedChunk
-from rag.embedding_model import EmbeddingModel
-from rag.llm_client import OllamaLLMClient
+from pydantic_ai import Agent, RunContext
+from pydantic_ai.models.openai import OpenAIChatModel
+from pydantic_ai.providers.ollama import OllamaProvider
+
+from rag.models import RAGDeps, RAGResult, RetrievedChunkModel
+from rag.retriever import LuceneBM25Retriever, LuceneVectorRetriever
+from rag.config import INDEX_DIR, OLLAMA_BASE_URL, OLLAMA_MODEL_NAME, EMBEDDING_MODEL_NAME
 
 
-def build_rag_prompt(question: str, chunks: list[RetrievedChunk]) -> str:
-    context_parts = []
-    for i, chunk in enumerate(chunks, 1):
-        context_parts.append(
-            f"[Document {i} - Source: {chunk['source']}, Chunk {chunk['chunk_index']}]\n"
-            f"{chunk['content']}\n"
-        )
-
-    context = "\n".join(context_parts)
-
-    prompt = f"""You are a helpful assistant that answers questions based on the provided context documents.
-
-        Context documents:
-        {context}
-
-        Question: {question}
-
-        Instructions:
-        - Answer the question using ONLY the information provided in the context documents above.
-        - If the context does not contain enough information to answer the question, say "I don't have enough information in the provided context to answer this question."
-        - Be concise and accurate.
-        - Cite the source document when possible (e.g., "According to [Document X]...").
-
-        Answer:"""
-
-    return prompt
+ollama_model = OpenAIChatModel(
+    model_name=OLLAMA_MODEL_NAME,
+    provider=OllamaProvider(base_url=OLLAMA_BASE_URL),  
+)
 
 
-def answer_question(
-    question: str,
+SYSTEM_PROMPT = """
+You are a retrieval-augmented assistant.
+
+- You MUST first call the `retrieve_chunks` tool to get relevant document chunks.
+- The user message will explicitly tell you which retrieval mode to use: "bm25" or "vector".
+- Use only the information from the retrieved chunks when answering.
+- If the chunks do not contain an answer, say that you don't know.
+- Return a concise, clear answer in the `answer` field and include all chunks you used.
+"""
+
+
+rag_agent = Agent(
+    model=ollama_model,
+    deps_type=RAGDeps,
+    output_type=RAGResult,
+    system_prompt=SYSTEM_PROMPT,
+)
+
+
+@rag_agent.tool
+def retrieve_chunks(
+    ctx: RunContext[RAGDeps],
+    query: str,
     mode: Literal["bm25", "vector"] = "bm25",
-    index_dir: Path = None,
-    embedding_model: EmbeddingModel = None,
-    llm_client: OllamaLLMClient = None,
-    top_k: int = None,
-) -> dict[str, Any]:
-    if index_dir is None:
-        index_dir = INDEX_DIR
-    if top_k is None:
-        top_k = TOP_K
+    top_k: int = 5,
+) -> list[RetrievedChunkModel]:
+    """
+    Retrieve relevant chunks from the Lucene index.
 
+    mode="bm25"   -> LuceneBM25Retriever
+    mode="vector" -> LuceneVectorRetriever
+    """
     if mode == "bm25":
-        retriever = LuceneBM25Retriever(index_dir)
-    elif mode == "vector":
-        if embedding_model is None:
-            embedding_model = EmbeddingModel(EMBEDDING_MODEL_NAME)
-        retriever = LuceneVectorRetriever(index_dir, embedding_model)
- 
-    try:
-        chunks = retriever.search(question, top_k=top_k)
+        results = ctx.deps.bm25.search(query, top_k=top_k)
+    else:
+        results = ctx.deps.vector.search(query, top_k=top_k)
 
-        if not chunks:
-            return {
-                "answer": "I couldn't find any relevant documents to answer your question.",
-                "sources": [],
-            }
+    return [RetrievedChunkModel(**r) for r in results]
 
-        prompt = build_rag_prompt(question, chunks)
+def run_rag(
+    question: str,
+    mode: Literal["bm25", "vector"],
+    top_k: int = 5,
+    index_dir: Path | None = None,
+) -> RAGResult:
+    index_path = index_dir or Path(INDEX_DIR)
 
-        if llm_client is None:
-            llm_client = OllamaLLMClient(OLLAMA_MODEL_NAME, OLLAMA_BASE_URL)
+    bm25_retriever = LuceneBM25Retriever(index_path)
+    from rag.embedding_model import EmbeddingModel
+    embedding_model = EmbeddingModel(EMBEDDING_MODEL_NAME)
+    vector_retriever = LuceneVectorRetriever(index_path, embedding_model)
 
-        answer = llm_client.generate(prompt)
+    deps = RAGDeps(bm25=bm25_retriever, vector=vector_retriever)
 
-        sources = [
-            {
-                "source": chunk["source"],
-                "chunk_index": chunk["chunk_index"],
-                "score": chunk["score"],
-            }
-            for chunk in chunks
-        ]
+    user_message = (
+        f"Retrieval mode: {mode}. Top_k: {top_k}. "
+        f"User question: {question}"
+    )
 
-        return {
-            "answer": answer,
-            "sources": sources,
-        }
-    finally:
-        retriever.close()
+    result = rag_agent.run_sync(
+        user_message,
+        deps=deps,
+    )
 
+    return result.data

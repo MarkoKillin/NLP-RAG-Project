@@ -1,6 +1,7 @@
-from typing import TypedDict, Any
+from typing import Any
 from pathlib import Path
 import numpy as np
+from rag.models import RetrievedChunk
 
 try:
     import lucene  # type: ignore
@@ -29,14 +30,6 @@ def ensure_lucene_env() -> Any:
 
     env.attachCurrentThread()
     return env
-
-
-class RetrievedChunk(TypedDict):
-    id: int
-    source: str
-    chunk_index: int
-    content: str
-    score: float
 
 
 class LuceneBM25Retriever:
@@ -115,9 +108,6 @@ class LuceneVectorRetriever:
         self.searcher = IndexSearcher(self.reader)
 
     def _numpy_to_java_float_array(self, vector: np.ndarray) -> Any:
-        """
-        Pretvara np.ndarray u Java float[] preko JArray; bez JNI glupiranja sa getEnv/NewFloatArray.
-        """
         vec = vector.astype(np.float32)
         return JArray('float')(vec.tolist())
 

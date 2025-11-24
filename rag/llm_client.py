@@ -29,4 +29,3 @@ class OllamaLLMClient:
             )
         except requests.exceptions.RequestException as e:
             raise RuntimeError(f"Error calling Ollama API: {e}")
-

@@ -11,7 +11,6 @@ services:
     networks:
       - rag-network
     healthcheck:
-      # Check if Ollama is responding (using ollama list command which is always available)
       test: ["CMD", "ollama", "list"]
       interval: 10s
       timeout: 5s
