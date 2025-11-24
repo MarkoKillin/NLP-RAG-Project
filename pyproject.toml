@@ -1,15 +1,29 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [project]
-name = "obrada-prirodnog-jezika"
+name = "rag-lucene-chat"
 version = "0.1.0"
-description = "Add your description here"
+description = "RAG chatbot with Lucene (BM25 + vector search) and Ollama"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.10"
 dependencies = [
-    "fastapi[standard]>=0.119.0",
-    "pydantic-ai>=1.1.0",
+    "numpy",
+    "pydantic-ai",
+    "requests",
+    "sentence-transformers",
+    "streamlit",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["rag*", "app*"]
 
 [dependency-groups]
 dev = [
-    "ruff>=0.14.1",
+    "ruff",
 ]
+
+# Note: PyLucene is not included here as it requires special installation
+# See README.md for PyLucene installation instructions

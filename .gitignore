@@ -1,10 +1,30 @@
-# Python-generated files
+# Python
 __pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
-
-# Virtual environments
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
 .venv
+
+# Lucene index
+index/lucene_index/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Streamlit
+.streamlit/
+
+# Data (optional - uncomment if you don't want to track data)
+# data/raw/*.txt
+# data/raw/*.md
