@@ -43,21 +43,7 @@ Designed as a full local RAG pipeline --- no external APIs required.
 
 ### Docker
 
-Install: - Docker Desktop\
-- Docker Compose
-
-## Installation
-
-## Docker Setup
-
-``` bash
-docker-compose up --build
-```
-
-Visit:
-
-    http://localhost:8501
-
+Install: - Docker Desktop or other Docker VMs
 
 ## Usage
 
