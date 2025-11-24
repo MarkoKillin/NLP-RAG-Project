@@ -24,7 +24,3 @@ Thumbs.db
 
 # Streamlit
 .streamlit/
-
-# Data (optional - uncomment if you don't want to track data)
-# data/raw/*.txt
-# data/raw/*.md

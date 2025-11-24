@@ -26,4 +26,3 @@ dev = [
 ]
 
 # Note: PyLucene is not included here as it requires special installation
-# See README.md for PyLucene installation instructions
