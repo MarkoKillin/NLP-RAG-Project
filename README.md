@@ -29,7 +29,6 @@ Designed as a full local RAG pipeline --- no external APIs required.
         config.py
         embedding_model.py
         ingestion.py
-        llm_client.py
         rag_agent.py
         retriever.py
       scripts/

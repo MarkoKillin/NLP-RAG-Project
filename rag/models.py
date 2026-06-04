@@ -1,7 +1,6 @@
 from typing import Any, Literal, TypedDict
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 
-# from rag.retriever import LuceneBM25Retriever, LuceneVectorRetriever
 
 class RetrievedChunkModel(BaseModel):
     id: int
@@ -18,9 +17,12 @@ class RAGResult(BaseModel):
 
 
 class RAGDeps(BaseModel):
-    # model_config = ConfigDict(arbitrary_types_allowed=True)
+    model_config = {"arbitrary_types_allowed": True}
     bm25: Any
     vector: Any
+    mode: Literal["bm25", "vector"] = "bm25"
+    top_k: int = 5
+
 
 class RetrievedChunk(TypedDict):
     id: int
@@ -28,4 +30,3 @@ class RetrievedChunk(TypedDict):
     chunk_index: int
     content: str
     score: float
-    

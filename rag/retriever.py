@@ -2,6 +2,7 @@ from typing import Any
 from pathlib import Path
 import numpy as np
 from rag.models import RetrievedChunk
+from rag.config import EMBEDDING_DIM
 
 try:
     import lucene  # type: ignore
@@ -14,7 +15,7 @@ try:
     from org.apache.lucene.search import IndexSearcher, TopDocs  # type: ignore
     from org.apache.lucene.store import FSDirectory  # type: ignore
     from org.apache.lucene.search.similarities import BM25Similarity  # type: ignore
-    from org.apache.lucene.search import KnnVectorQuery  # type: ignore
+    from org.apache.lucene.search import KnnFloatVectorQuery  # type: ignore
 
     LUCENE_AVAILABLE = True
 except ImportError:
@@ -59,26 +60,23 @@ class LuceneBM25Retriever:
     def search(self, query: str, top_k: int = 5) -> list[RetrievedChunk]:
         ensure_lucene_env()
 
-        try:
-            parsed_query = self.query_parser.parse(query)
-            top_docs: TopDocs = self.searcher.search(parsed_query, top_k)
+        parsed_query = self.query_parser.parse(query)
+        top_docs: TopDocs = self.searcher.search(parsed_query, top_k)
+        stored_fields = self.searcher.storedFields()
 
-            results: list[RetrievedChunk] = []
-            for score_doc in top_docs.scoreDocs:
-                doc = self.searcher.doc(score_doc.doc)
-                chunk: RetrievedChunk = {
-                    "id": score_doc.doc,
-                    "source": doc.get("source"),
-                    "chunk_index": int(doc.get("chunk_index")),
-                    "content": doc.get("content"),
-                    "score": float(score_doc.score),
-                }
-                results.append(chunk)
+        results: list[RetrievedChunk] = []
+        for score_doc in top_docs.scoreDocs:
+            doc = stored_fields.document(score_doc.doc)
+            chunk: RetrievedChunk = {
+                "id": int(doc.get("doc_id")),
+                "source": doc.get("source"),
+                "chunk_index": int(doc.get("chunk_index")),
+                "content": doc.get("content"),
+                "score": float(score_doc.score),
+            }
+            results.append(chunk)
 
-            return results
-        except Exception as e:
-            print(f"Error during BM25 search: {e}")
-            return []
+        return results
 
     def close(self):
         if hasattr(self, "reader"):
@@ -103,6 +101,14 @@ class LuceneVectorRetriever:
             )
 
         self.embedding_model = embedding_model
+        probe = self.embedding_model.encode(["dimension probe"])
+        if probe.shape[1] != EMBEDDING_DIM:
+            raise ValueError(
+                f"Embedding dimension mismatch: model produced {probe.shape[1]}, "
+                f"but EMBEDDING_DIM is configured as {EMBEDDING_DIM}. "
+                "The index was built against EMBEDDING_DIM; rebuild it or update the env var."
+            )
+
         self.directory = FSDirectory.open(Paths.get(str(self.index_dir)))
         self.reader = DirectoryReader.open(self.directory)
         self.searcher = IndexSearcher(self.reader)
@@ -114,31 +120,26 @@ class LuceneVectorRetriever:
     def search(self, query: str, top_k: int = 5) -> list[RetrievedChunk]:
         ensure_lucene_env()
 
-        try:
-            query_vector = self.embedding_model.encode([query])[0]  # shape: (dim,)
-            java_vector = self._numpy_to_java_float_array(query_vector)
+        query_vector = self.embedding_model.encode([query])[0]  # shape: (dim,)
+        java_vector = self._numpy_to_java_float_array(query_vector)
 
-            knn_query = KnnVectorQuery("embedding", java_vector, top_k)
-            top_docs: TopDocs = self.searcher.search(knn_query, top_k)
+        knn_query = KnnFloatVectorQuery("embedding", java_vector, top_k)
+        top_docs: TopDocs = self.searcher.search(knn_query, top_k)
+        stored_fields = self.searcher.storedFields()
 
-            results: list[RetrievedChunk] = []
-            for score_doc in top_docs.scoreDocs:
-                doc = self.searcher.doc(score_doc.doc)
-                chunk: RetrievedChunk = {
-                    "id": score_doc.doc,
-                    "source": doc.get("source"),
-                    "chunk_index": int(doc.get("chunk_index")),
-                    "content": doc.get("content"),
-                    "score": float(score_doc.score),
-                }
-                results.append(chunk)
+        results: list[RetrievedChunk] = []
+        for score_doc in top_docs.scoreDocs:
+            doc = stored_fields.document(score_doc.doc)
+            chunk: RetrievedChunk = {
+                "id": int(doc.get("doc_id")),
+                "source": doc.get("source"),
+                "chunk_index": int(doc.get("chunk_index")),
+                "content": doc.get("content"),
+                "score": float(score_doc.score),
+            }
+            results.append(chunk)
 
-            return results
-        except Exception as e:
-            print(f"Error during vector search: {e}")
-            import traceback
-            traceback.print_exc()
-            return []
+        return results
 
     def close(self):
         if hasattr(self, "reader"):

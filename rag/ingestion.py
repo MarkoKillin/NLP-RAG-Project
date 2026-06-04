@@ -6,10 +6,10 @@ try:
     from java.nio.file import Paths # type: ignore
     from org.apache.lucene.analysis.standard import StandardAnalyzer # type: ignore
     from org.apache.lucene.document import Document, Field, FieldType, StoredField # type: ignore
-    from org.apache.lucene.index import IndexWriter, IndexWriterConfig, IndexOptions # type: ignore
+    from org.apache.lucene.index import IndexWriter, IndexWriterConfig, IndexOptions, VectorSimilarityFunction # type: ignore
     from org.apache.lucene.store import FSDirectory # type: ignore
     from org.apache.lucene.search.similarities import BM25Similarity # type: ignore
-    from org.apache.lucene.document import KnnVectorField # type: ignore
+    from org.apache.lucene.document import KnnFloatVectorField # type: ignore
     LUCENE_AVAILABLE = True
 except ImportError:
     LUCENE_AVAILABLE = False
@@ -51,10 +51,11 @@ def load_documents(raw_data_dir: Path) -> list[tuple[str, str]]:
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
-                    if content.strip():
-                        documents.append((file_path.name, content))
-            except Exception as e:
+            except (OSError, UnicodeDecodeError) as e:
                 print(f"Error loading {file_path}: {e}")
+                continue
+            if content.strip():
+                documents.append((file_path.name, content))
 
     return documents
 
@@ -110,12 +111,20 @@ def build_lucene_index(
     all_embeddings = np.vstack(all_embeddings)
     print(f"Computed {len(all_embeddings)} embeddings of dimension {all_embeddings.shape[1]}")
 
+    if all_embeddings.shape[1] != EMBEDDING_DIM:
+        raise ValueError(
+            f"Embedding dimension mismatch: model produced {all_embeddings.shape[1]}, "
+            f"but EMBEDDING_DIM is configured as {EMBEDDING_DIM}. "
+            "Update EMBEDDING_DIM to match the embedding model."
+        )
+
     print(f"Building Lucene index in {index_dir}...")
 
     directory = FSDirectory.open(Paths.get(str(index_dir)))
     analyzer = StandardAnalyzer()
 
     config = IndexWriterConfig(analyzer)
+    config.setOpenMode(IndexWriterConfig.OpenMode.CREATE)
     config.setSimilarity(BM25Similarity())
 
     writer = IndexWriter(directory, config)
@@ -151,9 +160,9 @@ def build_lucene_index(
 
         # Vector field for k-NN search
         # Convert numpy array to Java float array
-        vector = embedding.astype(np.float32).tolist() 
+        vector = embedding.astype(np.float32).tolist()
         java_vector = JArray('float')(vector)
-        doc.add(KnnVectorField("embedding", java_vector))
+        doc.add(KnnFloatVectorField("embedding", java_vector, VectorSimilarityFunction.COSINE))
 
         # Store document ID
         doc.add(StoredField("doc_id", doc_id))
@@ -161,8 +170,8 @@ def build_lucene_index(
         writer.addDocument(doc)
         doc_id += 1
 
-        if (doc_id + 1) % 100 == 0:
-            print(f"Indexed {doc_id + 1} chunks...")
+        if doc_id % 100 == 0:
+            print(f"Indexed {doc_id} chunks...")
 
     writer.commit()
     writer.close()
