@@ -87,9 +87,11 @@ WORKDIR /app
 
 ENV PYTHONPATH=/app:${PYTHONPATH}
 
-COPY pyproject.toml ./
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -e .
+COPY pyproject.toml uv.lock ./
+RUN pip install --no-cache-dir --upgrade pip uv && \
+    uv export --frozen --no-dev --no-emit-project -o /tmp/requirements.txt && \
+    pip install --no-cache-dir -r /tmp/requirements.txt && \
+    rm /tmp/requirements.txt
 
 COPY . .
 RUN chmod +x /app/scripts/docker-entrypoint.sh
@@ -98,7 +100,7 @@ RUN mkdir -p data/raw index/lucene_index
 
 EXPOSE 8501
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import streamlit; print('OK')" || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8501/_stcore/health || exit 1
 
 ENTRYPOINT ["bash", "/app/scripts/docker-entrypoint.sh"]

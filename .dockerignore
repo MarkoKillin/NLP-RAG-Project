@@ -18,7 +18,6 @@ Thumbs.db
 .streamlit/
 *.md
 !README.md
-uv.lock
 .pytest_cache/
 .coverage
 htmlcov/
