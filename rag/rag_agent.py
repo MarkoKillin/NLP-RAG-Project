@@ -6,7 +6,7 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.ollama import OllamaProvider
 
 from rag.models import RAGDeps, RAGResult, RetrievedChunkModel
-from rag.retriever import LuceneBM25Retriever, LuceneVectorRetriever
+from rag.retriever import BM25Retriever, VectorRetriever
 from rag.embedding_model import EmbeddingModel
 from rag.config import INDEX_DIR, OLLAMA_BASE_URL, OLLAMA_MODEL_NAME, EMBEDDING_MODEL_NAME
 
@@ -40,7 +40,7 @@ def retrieve_chunks(
     ctx: RunContext[RAGDeps],
     query: str,
 ) -> list[RetrievedChunkModel]:
-    """Retrieve relevant chunks from the Lucene index for the given query."""
+    """Retrieve relevant chunks from the index for the given query."""
     if ctx.deps.mode == "bm25":
         results = ctx.deps.bm25.search(query, top_k=ctx.deps.top_k)
     else:
@@ -57,8 +57,8 @@ def build_rag_deps(
     """Construct the BM25 + vector retrievers once. Reuse across queries."""
     index_path = index_dir or Path(INDEX_DIR)
     embedding_model = EmbeddingModel(EMBEDDING_MODEL_NAME)
-    bm25_retriever = LuceneBM25Retriever(index_path)
-    vector_retriever = LuceneVectorRetriever(index_path, embedding_model)
+    bm25_retriever = BM25Retriever(index_path)
+    vector_retriever = VectorRetriever(index_path, embedding_model)
     return RAGDeps(bm25=bm25_retriever, vector=vector_retriever, mode=mode, top_k=top_k)
 
 

@@ -38,20 +38,19 @@ pull_model() {
 pull_model "$CHAT_MODEL"
 pull_model "$EMBED_MODEL"
 
-INDEX_DIR="${INDEX_DIR:-/app/index/lucene_index}"
+INDEX_DIR="${INDEX_DIR:-/app/index}"
 RAW_DATA_DIR="${RAW_DATA_DIR:-/app/data/raw}"
 REBUILD_INDEX="${REBUILD_INDEX:-0}"
 
-# Lucene writes a segments_* file once the index has been committed.
-# If one exists, we treat the index as already built and skip the rebuild
-# unless the caller explicitly opts in via REBUILD_INDEX=1.
-if [ "$REBUILD_INDEX" = "1" ] || ! ls "$INDEX_DIR"/segments_* >/dev/null 2>&1; then
-    echo "Building Lucene index in $INDEX_DIR..."
+# The index build writes index.pkl + vectors.npy. If both exist we skip the
+# rebuild unless the caller explicitly opts in via REBUILD_INDEX=1.
+if [ "$REBUILD_INDEX" = "1" ] || [ ! -f "$INDEX_DIR/index.pkl" ] || [ ! -f "$INDEX_DIR/vectors.npy" ]; then
+    echo "Building index in $INDEX_DIR..."
     rm -rf "$INDEX_DIR"
     mkdir -p "$INDEX_DIR"
     python -m scripts.build_index
 else
-    echo "Existing Lucene index found in $INDEX_DIR, skipping rebuild (set REBUILD_INDEX=1 to force)."
+    echo "Existing index found in $INDEX_DIR, skipping rebuild (set REBUILD_INDEX=1 to force)."
 fi
 
 echo "=== Starting Streamlit app ==="

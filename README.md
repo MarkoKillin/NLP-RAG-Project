@@ -1,9 +1,9 @@
-# Lucene RAG Chatbot
+# RAG Chatbot
 
 A Retrieval-Augmented Generation (RAG) chatbot powered by:
 
--   **Lucene BM25 lexical search**
--   **Lucene k-NN vector search**
+-   **Pure-Python BM25 lexical search**
+-   **Numpy cosine k-NN vector search**
 -   **Local Ollama LLM**
 -   **PydanticAI agent**
 -   **Streamlit UI**
@@ -13,7 +13,7 @@ Designed as a full local RAG pipeline --- no external APIs required.
 ## Features
 
 -   **Two retrieval modes**: BM25 (keyword) and Vector (semantic)
--   **Single Lucene index** holding both text fields and dense vectors
+-   **Single on-disk index** (`index.pkl` + `vectors.npy`) holding tokenized text and pre-normalized dense vectors
 -   **Local LLM and embedding model via Ollama** (e.g., Mistral, Llama, etc.)
 -   **Streamlit chat interface** with citations
 -   **Modular RAG architecture** (retriever, embeddings, ingestion, agent)
@@ -24,11 +24,13 @@ Designed as a full local RAG pipeline --- no external APIs required.
       app/
         streamlit_app.py
       data/raw/                # Input documents (.txt, .md)
-      index/lucene_index/      # Auto-built Lucene index
+      index/                   # Auto-built index (index.pkl, vectors.npy)
       rag/
+        bm25.py
         config.py
         embedding_model.py
         ingestion.py
+        models.py
         rag_agent.py
         retriever.py
       scripts/

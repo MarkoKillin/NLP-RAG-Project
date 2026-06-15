@@ -4,7 +4,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parent.parent
 
 RAW_DATA_DIR = Path(os.getenv("RAW_DATA_DIR", str(BASE_DIR / "data" / "raw")))
-INDEX_DIR = Path(os.getenv("INDEX_DIR", str(BASE_DIR / "index" / "lucene_index")))
+INDEX_DIR = Path(os.getenv("INDEX_DIR", str(BASE_DIR / "index")))
 
 CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "400"))
 CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "50"))

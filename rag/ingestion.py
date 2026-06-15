@@ -1,38 +1,27 @@
+import pickle
 from pathlib import Path
-
-try:
-    import lucene  # type: ignore
-    from lucene import JArray  # type: ignore
-    from java.nio.file import Paths # type: ignore
-    from org.apache.lucene.analysis.standard import StandardAnalyzer # type: ignore
-    from org.apache.lucene.document import Document, Field, FieldType, StoredField # type: ignore
-    from org.apache.lucene.index import IndexWriter, IndexWriterConfig, IndexOptions, VectorSimilarityFunction # type: ignore
-    from org.apache.lucene.store import FSDirectory # type: ignore
-    from org.apache.lucene.search.similarities import BM25Similarity # type: ignore
-    from org.apache.lucene.document import KnnFloatVectorField # type: ignore
-    LUCENE_AVAILABLE = True
-except ImportError:
-    LUCENE_AVAILABLE = False
-    print("Warning: PyLucene not available. Please install PyLucene.")
 
 import numpy as np
 
-from rag.config import RAW_DATA_DIR, INDEX_DIR, CHUNK_SIZE, CHUNK_OVERLAP, EMBEDDING_DIM
+from rag.bm25 import BM25Index, tokenize
+from rag.config import EMBEDDING_DIM
 from rag.embedding_model import EmbeddingModel
+
+
+INDEX_FILE = "index.pkl"
+VECTORS_FILE = "vectors.npy"
 
 
 def chunk_text(text: str, chunk_size: int = 400, chunk_overlap: int = 50) -> list[str]:
     words = text.split()
-    chunks = []
-
     if len(words) <= chunk_size:
         return [text]
 
+    chunks = []
     start = 0
     while start < len(words):
         end = min(start + chunk_size, len(words))
-        chunk_words = words[start:end]
-        chunks.append(" ".join(chunk_words))
+        chunks.append(" ".join(words[start:end]))
         start += chunk_size - chunk_overlap
 
     return chunks
@@ -60,121 +49,68 @@ def load_documents(raw_data_dir: Path) -> list[tuple[str, str]]:
     return documents
 
 
-def build_lucene_index(
+def build_index(
     raw_data_dir: Path,
     index_dir: Path,
     embedding_model: EmbeddingModel,
     chunk_size: int = 400,
     chunk_overlap: int = 50,
 ) -> None:
-    if not LUCENE_AVAILABLE:
-        raise ImportError(
-            "PyLucene is not available. Please install PyLucene to build the index."
-        )
-
-    # Initialize Lucene VM
-    if not lucene.getVMEnv():
-        lucene.initVM(vmargs=["-Xmx2g"])
-
     print(f"Loading documents from {raw_data_dir}...")
     documents = load_documents(raw_data_dir)
     if not documents:
         raise ValueError(f"No documents found in {raw_data_dir}")
-
     print(f"Loaded {len(documents)} documents")
 
     index_dir = Path(index_dir)
     index_dir.mkdir(parents=True, exist_ok=True)
 
-    print("Chunking documents and computing embeddings...")
-    all_chunks = []
-    all_embeddings = []
-    chunk_metadata = []  # (source, chunk_index)
-
+    print("Chunking documents...")
+    all_chunks: list[str] = []
+    chunk_metadata: list[dict] = []
     for filename, content in documents:
         chunks = chunk_text(content, chunk_size, chunk_overlap)
         for idx, chunk in enumerate(chunks):
+            chunk_metadata.append({
+                "id": len(all_chunks),
+                "source": filename,
+                "chunk_index": idx,
+                "content": chunk,
+            })
             all_chunks.append(chunk)
-            chunk_metadata.append((filename, idx))
-
     print(f"Created {len(all_chunks)} chunks")
 
-    # Compute embeddings in batches
+    print("Building BM25 index...")
+    bm25 = BM25Index()
+    for chunk in all_chunks:
+        bm25.add(tokenize(chunk))
+    bm25.finalize()
+
+    print("Computing embeddings...")
     batch_size = 32
+    batches = []
     for i in range(0, len(all_chunks), batch_size):
         batch = all_chunks[i : i + batch_size]
-        embeddings = embedding_model.encode(batch)
-        all_embeddings.append(embeddings)
+        batches.append(embedding_model.encode(batch))
         if (i // batch_size + 1) % 10 == 0:
             print(f"Computed embeddings for {min(i + batch_size, len(all_chunks))} chunks...")
+    vectors = np.vstack(batches).astype(np.float32)
+    print(f"Computed {len(vectors)} embeddings of dimension {vectors.shape[1]}")
 
-    all_embeddings = np.vstack(all_embeddings)
-    print(f"Computed {len(all_embeddings)} embeddings of dimension {all_embeddings.shape[1]}")
-
-    if all_embeddings.shape[1] != EMBEDDING_DIM:
+    if vectors.shape[1] != EMBEDDING_DIM:
         raise ValueError(
-            f"Embedding dimension mismatch: model produced {all_embeddings.shape[1]}, "
+            f"Embedding dimension mismatch: model produced {vectors.shape[1]}, "
             f"but EMBEDDING_DIM is configured as {EMBEDDING_DIM}. "
             "Update EMBEDDING_DIM to match the embedding model."
         )
 
-    print(f"Building Lucene index in {index_dir}...")
+    # Pre-normalize so cosine similarity reduces to a dot product at query time.
+    norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+    norms[norms == 0] = 1.0
+    vectors = vectors / norms
 
-    directory = FSDirectory.open(Paths.get(str(index_dir)))
-    analyzer = StandardAnalyzer()
-
-    config = IndexWriterConfig(analyzer)
-    config.setOpenMode(IndexWriterConfig.OpenMode.CREATE)
-    config.setSimilarity(BM25Similarity())
-
-    writer = IndexWriter(directory, config)
-
-    # Define field types
-    # Text field for BM25 search (stored and indexed)
-    text_field_type = FieldType()
-    text_field_type.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS)
-    text_field_type.setStored(True)
-    text_field_type.setTokenized(True)
-    text_field_type.freeze()
-
-    # String field for source (stored, not tokenized)
-    string_field_type = FieldType()
-    string_field_type.setIndexOptions(IndexOptions.DOCS)
-    string_field_type.setStored(True)
-    string_field_type.setTokenized(False)
-    string_field_type.freeze()
-
-    # Add documents to index
-    doc_id = 0
-    for (chunk, embedding), (source, chunk_idx) in zip(
-        zip(all_chunks, all_embeddings), chunk_metadata
-    ):
-        doc = Document()
-
-        # Text field for BM25
-        doc.add(Field("content", chunk, text_field_type))
-
-        # Source and chunk index
-        doc.add(Field("source", source, string_field_type))
-        doc.add(StoredField("chunk_index", chunk_idx))
-
-        # Vector field for k-NN search
-        # Convert numpy array to Java float array
-        vector = embedding.astype(np.float32).tolist()
-        java_vector = JArray('float')(vector)
-        doc.add(KnnFloatVectorField("embedding", java_vector, VectorSimilarityFunction.COSINE))
-
-        # Store document ID
-        doc.add(StoredField("doc_id", doc_id))
-
-        writer.addDocument(doc)
-        doc_id += 1
-
-        if doc_id % 100 == 0:
-            print(f"Indexed {doc_id} chunks...")
-
-    writer.commit()
-    writer.close()
-
-    print(f"Index built successfully with {doc_id} documents in {index_dir}")
-
+    print(f"Writing index to {index_dir}...")
+    with open(index_dir / INDEX_FILE, "wb") as f:
+        pickle.dump({"bm25": bm25, "chunks": chunk_metadata}, f)
+    np.save(index_dir / VECTORS_FILE, vectors)
+    print(f"Index built with {len(all_chunks)} chunks in {index_dir}")

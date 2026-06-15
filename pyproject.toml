@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rag-lucene-chat"
+name = "rag-chat"
 version = "0.1.0"
-description = "RAG chatbot with Lucene (BM25 + vector search) and Ollama"
+description = "RAG chatbot with BM25 + vector search and Ollama"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -23,5 +23,3 @@ include = ["rag*", "app*"]
 dev = [
     "ruff",
 ]
-
-# Note: PyLucene is not included here as it requires special installation
