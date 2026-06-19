@@ -1,3 +1,6 @@
+# uv lockfile — not versioned; deps are frozen in requirements.txt
+uv.lock
+
 # Python
 __pycache__/
 *.py[cod]

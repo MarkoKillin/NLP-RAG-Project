@@ -13,6 +13,14 @@ VECTORS_FILE = "vectors.npy"
 
 
 def chunk_text(text: str, chunk_size: int = 400, chunk_overlap: int = 50) -> list[str]:
+    if chunk_size <= 0:
+        raise ValueError(f"chunk_size must be positive, got {chunk_size}")
+    if not 0 <= chunk_overlap < chunk_size:
+        raise ValueError(
+            f"chunk_overlap must satisfy 0 <= chunk_overlap < chunk_size, "
+            f"got chunk_overlap={chunk_overlap}, chunk_size={chunk_size}"
+        )
+
     words = text.split()
     if len(words) <= chunk_size:
         return [text]
