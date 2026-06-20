@@ -4,7 +4,7 @@ from pathlib import Path
 import numpy as np
 
 from rag.bm25 import BM25Index, tokenize
-from rag.config import EMBEDDING_DIM
+from rag.config import EMBEDDING_DIM, EMBEDDING_QUERY_PREFIX
 from rag.embedding_model import EmbeddingModel
 from rag.ingestion import INDEX_FILE, VECTORS_FILE
 from rag.models import RetrievedChunk
@@ -52,17 +52,27 @@ class VectorRetriever:
         self.index_dir = Path(index_dir)
         _, self.chunks, self.vectors = _load_index(self.index_dir)
         self.embedding_model = embedding_model
+        self._dim_checked = False
 
-        probe = self.embedding_model.encode(["dimension probe"])
-        if probe.shape[1] != EMBEDDING_DIM:
+    def _check_dimension(self, query_vec: np.ndarray) -> None:
+        # Verify lazily, on the first real query, so constructing the retriever
+        # doesn't require the embedding backend (Ollama) to be reachable yet.
+        if self._dim_checked:
+            return
+        if query_vec.shape[0] != EMBEDDING_DIM:
             raise ValueError(
-                f"Embedding dimension mismatch: model produced {probe.shape[1]}, "
+                f"Embedding dimension mismatch: model produced {query_vec.shape[0]}, "
                 f"but EMBEDDING_DIM is configured as {EMBEDDING_DIM}. "
                 "The index was built against EMBEDDING_DIM; rebuild it or update the env var."
             )
+        self._dim_checked = True
 
     def search(self, query: str, top_k: int = 5) -> list[RetrievedChunk]:
-        query_vec = self.embedding_model.encode([query])[0].astype(np.float32)
+        # arctic-embed is asymmetric: prefix the query so it lands in the same
+        # space as the raw-embedded documents. The prefix is empty for symmetric
+        # models (configured via EMBEDDING_QUERY_PREFIX).
+        query_vec = self.embedding_model.encode([EMBEDDING_QUERY_PREFIX + query])[0].astype(np.float32)
+        self._check_dimension(query_vec)
         norm = float(np.linalg.norm(query_vec))
         if norm > 0:
             query_vec = query_vec / norm

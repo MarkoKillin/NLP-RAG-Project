@@ -23,14 +23,14 @@ You are a retrieval-augmented assistant.
 - You MUST first call the `retrieve_chunks` tool with the user's question to get relevant document chunks.
 - Use only the information from the retrieved chunks when answering.
 - If the chunks do not contain an answer, say that you don't know.
-- Return a concise, clear answer in the `answer` field and include all chunks you used.
+- Return a concise, clear answer. The citations are attached automatically; you do not need to repeat the chunks.
 """
 
 
 rag_agent = Agent(
     model=ollama_model,
     deps_type=RAGDeps,
-    output_type=RAGResult,
+    output_type=str,
     system_prompt=SYSTEM_PROMPT,
 )
 
@@ -46,20 +46,27 @@ def retrieve_chunks(
     else:
         results = ctx.deps.vector.search(query, top_k=ctx.deps.top_k)
 
-    return [RetrievedChunkModel(**r) for r in results]
+    chunks = [RetrievedChunkModel(**r) for r in results]
+    # Capture the actual retrieved chunks so the result carries verbatim
+    # citations (content + scores) rather than whatever the LLM reproduces.
+    # De-dupe by chunk id: the model may call this tool more than once per run
+    # (re-queries / retries), which would otherwise show duplicate sources.
+    seen = {c.id for c in ctx.deps.retrieved}
+    ctx.deps.retrieved.extend(c for c in chunks if c.id not in seen)
+    return chunks
 
 
-def build_rag_deps(
-    index_dir: Path | None = None,
-    mode: Literal["bm25", "vector"] = "bm25",
-    top_k: int = 5,
-) -> RAGDeps:
-    """Construct the BM25 + vector retrievers once. Reuse across queries."""
+def build_rag_deps(index_dir: Path | None = None) -> RAGDeps:
+    """Construct the BM25 + vector retrievers once. Reuse across queries.
+
+    The per-request mode/top_k are set later in run_rag, so they are left at
+    their model defaults here.
+    """
     index_path = index_dir or Path(INDEX_DIR)
     embedding_model = EmbeddingModel(EMBEDDING_MODEL_NAME)
     bm25_retriever = BM25Retriever(index_path)
     vector_retriever = VectorRetriever(index_path, embedding_model)
-    return RAGDeps(bm25=bm25_retriever, vector=vector_retriever, mode=mode, top_k=top_k)
+    return RAGDeps(bm25=bm25_retriever, vector=vector_retriever)
 
 
 def run_rag(
@@ -68,10 +75,15 @@ def run_rag(
     deps: RAGDeps,
     top_k: int = 5,
 ) -> RAGResult:
-    deps.mode = mode
-    deps.top_k = top_k
+    # Build a fresh per-request deps that reuses the (expensive) shared
+    # retrievers. The shared deps from build_rag_deps may be cached and used
+    # concurrently, so we must not mutate its mode/top_k or its retrieved list.
+    run_deps = RAGDeps(bm25=deps.bm25, vector=deps.vector, mode=mode, top_k=top_k)
 
-    result = rag_agent.run_sync(question, deps=deps)
-    output = result.output
-    output.retrieval_mode = mode
-    return output
+    result = rag_agent.run_sync(question, deps=run_deps)
+
+    return RAGResult(
+        answer=result.output,
+        retrieval_mode=mode,
+        chunks=run_deps.retrieved,
+    )

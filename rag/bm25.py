@@ -26,7 +26,11 @@ class BM25Index:
 
     def finalize(self) -> None:
         self.N = len(self.doc_lengths)
+        # Guard against an all-empty corpus: avgdl of 0 would divide-by-zero in
+        # the length-normalization term during search.
         self.avgdl = sum(self.doc_lengths) / self.N if self.N else 0.0
+        if self.avgdl == 0.0:
+            self.avgdl = 1.0
 
     def search(self, query_tokens: list[str], top_k: int = 5) -> list[tuple[int, float]]:
         if self.N == 0:

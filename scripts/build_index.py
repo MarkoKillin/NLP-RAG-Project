@@ -22,7 +22,7 @@ def main():
 
     if not RAW_DATA_DIR.exists():
         print(f"Error: Raw data directory {RAW_DATA_DIR} does not exist.")
-        print(f"Please create it and add .txt or .md files.")
+        print("Please create it and add .txt or .md files.")
         sys.exit(1)
 
     print("\nInitializing embedding model...")

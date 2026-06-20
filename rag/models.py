@@ -22,6 +22,9 @@ class RAGDeps(BaseModel):
     vector: Any
     mode: Literal["bm25", "vector"] = "bm25"
     top_k: int = 5
+    # Populated by the retrieve_chunks tool so the actual retrieved chunks can
+    # be attached to the result instead of round-tripping through the LLM.
+    retrieved: list[RetrievedChunkModel] = []
 
 
 class RetrievedChunk(TypedDict):

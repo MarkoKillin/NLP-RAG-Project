@@ -12,9 +12,6 @@ venv/
 ENV/
 .venv
 
-# Lucene index
-index/lucene_index/
-
 # IDE
 .vscode/
 .idea/
