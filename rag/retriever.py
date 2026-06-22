@@ -1,145 +1,90 @@
-from typing import Any
+import pickle
 from pathlib import Path
+
 import numpy as np
+
+from rag.bm25 import BM25Index, tokenize
+from rag.config import EMBEDDING_DIM, EMBEDDING_QUERY_PREFIX
+from rag.embedding_model import EmbeddingModel
+from rag.ingestion import INDEX_FILE, VECTORS_FILE
 from rag.models import RetrievedChunk
 
-try:
-    import lucene  # type: ignore
-    from lucene import JArray  # type: ignore
 
-    from java.nio.file import Paths  # type: ignore
-    from org.apache.lucene.analysis.standard import StandardAnalyzer  # type: ignore
-    from org.apache.lucene.index import DirectoryReader  # type: ignore
-    from org.apache.lucene.queryparser.classic import QueryParser  # type: ignore
-    from org.apache.lucene.search import IndexSearcher, TopDocs  # type: ignore
-    from org.apache.lucene.store import FSDirectory  # type: ignore
-    from org.apache.lucene.search.similarities import BM25Similarity  # type: ignore
-    from org.apache.lucene.search import KnnVectorQuery  # type: ignore
-
-    LUCENE_AVAILABLE = True
-except ImportError:
-    LUCENE_AVAILABLE = False
-    print("Warning: PyLucene not available. Please install PyLucene.")
+def _load_index(index_dir: Path) -> tuple[BM25Index, list[dict], np.ndarray]:
+    index_path = index_dir / INDEX_FILE
+    vectors_path = index_dir / VECTORS_FILE
+    if not index_path.exists() or not vectors_path.exists():
+        raise FileNotFoundError(
+            f"Index files not found in {index_dir}. "
+            "Please build the index first using: python -m scripts.build_index"
+        )
+    with open(index_path, "rb") as f:
+        data = pickle.load(f)
+    vectors = np.load(vectors_path)
+    return data["bm25"], data["chunks"], vectors
 
 
-def ensure_lucene_env() -> Any:
-    env = lucene.getVMEnv()
-    if env is None:
-        lucene.initVM(vmargs=["-Xmx2g"])
-        env = lucene.getVMEnv()
+def _chunk_to_result(meta: dict, score: float) -> RetrievedChunk:
+    return {
+        "id": meta["id"],
+        "source": meta["source"],
+        "chunk_index": meta["chunk_index"],
+        "content": meta["content"],
+        "score": float(score),
+    }
 
-    env.attachCurrentThread()
-    return env
 
-
-class LuceneBM25Retriever:
+class BM25Retriever:
     def __init__(self, index_dir: Path):
-        if not LUCENE_AVAILABLE:
-            raise ImportError("PyLucene is required for BM25 retrieval.")
-
-        ensure_lucene_env()
-
         self.index_dir = Path(index_dir)
-        if not self.index_dir.exists():
-            self.index_dir.mkdir(parents=True, exist_ok=True)
-
-        if not any(self.index_dir.iterdir()):
-            raise FileNotFoundError(
-                f"Index directory {self.index_dir} exists but is empty. "
-                "Please build the index first using: python -m scripts.build_index"
-            )
-
-        self.directory = FSDirectory.open(Paths.get(str(self.index_dir)))
-        self.reader = DirectoryReader.open(self.directory)
-        self.searcher = IndexSearcher(self.reader)
-        self.searcher.setSimilarity(BM25Similarity())
-        self.analyzer = StandardAnalyzer()
-        self.query_parser = QueryParser("content", self.analyzer)
+        self.bm25, self.chunks, _ = _load_index(self.index_dir)
 
     def search(self, query: str, top_k: int = 5) -> list[RetrievedChunk]:
-        ensure_lucene_env()
+        ranked = self.bm25.search(tokenize(query), top_k=top_k)
+        return [_chunk_to_result(self.chunks[doc_id], score) for doc_id, score in ranked]
 
-        try:
-            parsed_query = self.query_parser.parse(query)
-            top_docs: TopDocs = self.searcher.search(parsed_query, top_k)
-
-            results: list[RetrievedChunk] = []
-            for score_doc in top_docs.scoreDocs:
-                doc = self.searcher.doc(score_doc.doc)
-                chunk: RetrievedChunk = {
-                    "id": score_doc.doc,
-                    "source": doc.get("source"),
-                    "chunk_index": int(doc.get("chunk_index")),
-                    "content": doc.get("content"),
-                    "score": float(score_doc.score),
-                }
-                results.append(chunk)
-
-            return results
-        except Exception as e:
-            print(f"Error during BM25 search: {e}")
-            return []
-
-    def close(self):
-        if hasattr(self, "reader"):
-            self.reader.close()
+    def close(self) -> None:
+        pass
 
 
-class LuceneVectorRetriever:
-    def __init__(self, index_dir: Path, embedding_model):
-        if not LUCENE_AVAILABLE:
-            raise ImportError("PyLucene is required for vector retrieval.")
-
-        ensure_lucene_env()
-
+class VectorRetriever:
+    def __init__(self, index_dir: Path, embedding_model: EmbeddingModel):
         self.index_dir = Path(index_dir)
-        if not self.index_dir.exists():
-            self.index_dir.mkdir(parents=True, exist_ok=True)
-
-        if not any(self.index_dir.iterdir()):
-            raise FileNotFoundError(
-                f"Index directory {self.index_dir} exists but is empty. "
-                "Please build the index first using: python -m scripts.build_index"
-            )
-
+        _, self.chunks, self.vectors = _load_index(self.index_dir)
         self.embedding_model = embedding_model
-        self.directory = FSDirectory.open(Paths.get(str(self.index_dir)))
-        self.reader = DirectoryReader.open(self.directory)
-        self.searcher = IndexSearcher(self.reader)
+        self._dim_checked = False
 
-    def _numpy_to_java_float_array(self, vector: np.ndarray) -> Any:
-        vec = vector.astype(np.float32)
-        return JArray('float')(vec.tolist())
+    def _check_dimension(self, query_vec: np.ndarray) -> None:
+        # Verify lazily, on the first real query, so constructing the retriever
+        # doesn't require the embedding backend (Ollama) to be reachable yet.
+        if self._dim_checked:
+            return
+        if query_vec.shape[0] != EMBEDDING_DIM:
+            raise ValueError(
+                f"Embedding dimension mismatch: model produced {query_vec.shape[0]}, "
+                f"but EMBEDDING_DIM is configured as {EMBEDDING_DIM}. "
+                "The index was built against EMBEDDING_DIM; rebuild it or update the env var."
+            )
+        self._dim_checked = True
 
     def search(self, query: str, top_k: int = 5) -> list[RetrievedChunk]:
-        ensure_lucene_env()
+        # arctic-embed is asymmetric: prefix the query so it lands in the same
+        # space as the raw-embedded documents. The prefix is empty for symmetric
+        # models (configured via EMBEDDING_QUERY_PREFIX).
+        query_vec = self.embedding_model.encode([EMBEDDING_QUERY_PREFIX + query])[0].astype(np.float32)
+        self._check_dimension(query_vec)
+        norm = float(np.linalg.norm(query_vec))
+        if norm > 0:
+            query_vec = query_vec / norm
 
-        try:
-            query_vector = self.embedding_model.encode([query])[0]  # shape: (dim,)
-            java_vector = self._numpy_to_java_float_array(query_vector)
-
-            knn_query = KnnVectorQuery("embedding", java_vector, top_k)
-            top_docs: TopDocs = self.searcher.search(knn_query, top_k)
-
-            results: list[RetrievedChunk] = []
-            for score_doc in top_docs.scoreDocs:
-                doc = self.searcher.doc(score_doc.doc)
-                chunk: RetrievedChunk = {
-                    "id": score_doc.doc,
-                    "source": doc.get("source"),
-                    "chunk_index": int(doc.get("chunk_index")),
-                    "content": doc.get("content"),
-                    "score": float(score_doc.score),
-                }
-                results.append(chunk)
-
-            return results
-        except Exception as e:
-            print(f"Error during vector search: {e}")
-            import traceback
-            traceback.print_exc()
+        scores = self.vectors @ query_vec
+        k = min(top_k, len(scores))
+        if k == 0:
             return []
+        top_indices = np.argpartition(-scores, k - 1)[:k]
+        top_indices = top_indices[np.argsort(-scores[top_indices])]
 
-    def close(self):
-        if hasattr(self, "reader"):
-            self.reader.close()
+        return [_chunk_to_result(self.chunks[int(idx)], scores[idx]) for idx in top_indices]
+
+    def close(self) -> None:
+        pass

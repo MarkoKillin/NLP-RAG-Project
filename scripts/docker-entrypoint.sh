@@ -1,4 +1,5 @@
-set +e
+#!/usr/bin/env bash
+set -euo pipefail
 
 echo "=== RAG Chatbot Startup Script ==="
 
@@ -18,18 +19,39 @@ while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
 done
 
 if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-    echo "Warning: Ollama did not become ready in time. Continuing anyway..."
+    echo "Error: Ollama did not become ready at $OLLAMA_URL after $MAX_RETRIES retries." >&2
+    exit 1
 fi
 
-INDEX_DIR="${INDEX_DIR:-/app/index/lucene_index}"
+CHAT_MODEL="${OLLAMA_MODEL_NAME:-hf.co/google/gemma-2b-it}"
+EMBED_MODEL="${EMBEDDING_MODEL_NAME:-hf.co/Snowflake/snowflake-arctic-embed-m-v1.5:BF16}"
+
+pull_model() {
+    local model="$1"
+    echo "Pulling Ollama model: $model"
+    curl -fsS -X POST "$OLLAMA_URL/api/pull" \
+        -H "Content-Type: application/json" \
+        -d "{\"name\": \"$model\", \"stream\": false}"
+    echo
+}
+
+pull_model "$CHAT_MODEL"
+pull_model "$EMBED_MODEL"
+
+INDEX_DIR="${INDEX_DIR:-/app/index}"
 RAW_DATA_DIR="${RAW_DATA_DIR:-/app/data/raw}"
+REBUILD_INDEX="${REBUILD_INDEX:-0}"
 
-echo "Rebuilding Lucene index..."
-
-rm -rf "$INDEX_DIR"
-mkdir -p "$INDEX_DIR"
-
-python -m scripts.build_index
+# The index build writes index.pkl + vectors.npy. If both exist we skip the
+# rebuild unless the caller explicitly opts in via REBUILD_INDEX=1.
+if [ "$REBUILD_INDEX" = "1" ] || [ ! -f "$INDEX_DIR/index.pkl" ] || [ ! -f "$INDEX_DIR/vectors.npy" ]; then
+    echo "Building index in $INDEX_DIR..."
+    rm -rf "$INDEX_DIR"
+    mkdir -p "$INDEX_DIR"
+    python -m scripts.build_index
+else
+    echo "Existing index found in $INDEX_DIR, skipping rebuild (set REBUILD_INDEX=1 to force)."
+fi
 
 echo "=== Starting Streamlit app ==="
 exec streamlit run app/streamlit_app.py --server.port=8501 --server.address=0.0.0.0

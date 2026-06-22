@@ -1,10 +1,26 @@
 import streamlit as st
 
-from rag.rag_agent import run_rag
+from rag.config import TOP_K
+from rag.rag_agent import build_rag_deps, run_rag
 
 
 st.set_page_config(page_title="RAG Chatbot", page_icon="🤖")
 st.title("RAG Chatbot")
+
+
+def render_sources(sources: list[dict]) -> None:
+    with st.expander("View sources"):
+        for src in sources:
+            st.markdown(
+                f"- **{src['source']}** "
+                f"(chunk {src['chunk_index']}, score={src['score']:.3f})"
+            )
+
+
+@st.cache_resource
+def get_rag_deps():
+    return build_rag_deps()
+
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -23,12 +39,7 @@ for message in st.session_state.messages:
         if message["role"] == "assistant" and "sources" in message:
             sources = message["sources"] or []
             if sources:
-                with st.expander("View sources"):
-                    for src in sources:
-                        st.markdown(
-                            f"- **{src['source']}** "
-                            f"(chunk {src['chunk_index']}, score={src['score']:.3f})"
-                        )
+                render_sources(sources)
 
 if prompt := st.chat_input("Ask a question about the indexed documents:"):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -40,30 +51,18 @@ if prompt := st.chat_input("Ask a question about the indexed documents:"):
             try:
                 result = run_rag(
                     question=prompt,
-                    mode=mode, 
-                    top_k=5,
+                    mode=mode,
+                    deps=get_rag_deps(),
+                    top_k=TOP_K,
                 )
 
                 answer = result.answer
-
-                raw_sources = getattr(result, "sources", None) or getattr(
-                    result, "chunks", []
-                )
-
-                try:
-                    sources = [s.model_dump() for s in raw_sources]
-                except AttributeError:
-                    sources = list(raw_sources)
+                sources = [c.model_dump() for c in result.chunks]
 
                 st.markdown(answer)
 
                 if sources:
-                    with st.expander("View sources"):
-                        for src in sources:
-                            st.markdown(
-                                f"- **{src['source']}** "
-                                f"(chunk {src['chunk_index']}, score={src['score']:.3f})"
-                            )
+                    render_sources(sources)
 
                 st.session_state.messages.append(
                     {
