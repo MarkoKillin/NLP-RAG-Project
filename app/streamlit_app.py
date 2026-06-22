@@ -1,5 +1,6 @@
 import streamlit as st
 
+from rag.config import TOP_K
 from rag.rag_agent import build_rag_deps, run_rag
 
 
@@ -52,7 +53,7 @@ if prompt := st.chat_input("Ask a question about the indexed documents:"):
                     question=prompt,
                     mode=mode,
                     deps=get_rag_deps(),
-                    top_k=5,
+                    top_k=TOP_K,
                 )
 
                 answer = result.answer

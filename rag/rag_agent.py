@@ -1,5 +1,7 @@
 from typing import Literal
 from pathlib import Path
+import asyncio
+import threading
 
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models.openai import OpenAIChatModel
@@ -69,6 +71,36 @@ def build_rag_deps(index_dir: Path | None = None) -> RAGDeps:
     return RAGDeps(bm25=bm25_retriever, vector=vector_retriever)
 
 
+def _run_agent(question: str, run_deps: RAGDeps):
+    """Run the agent, tolerating a thread that already has an event loop.
+
+    ``run_sync`` raises if called from a thread with a running event loop. That
+    does not normally happen under Streamlit, but to stay robust we detect a
+    running loop and, if present, drive the async ``run`` in a dedicated thread
+    with its own loop instead.
+    """
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        # No loop running in this thread — the simple path.
+        return rag_agent.run_sync(question, deps=run_deps)
+
+    box: dict = {}
+
+    def _worker() -> None:
+        try:
+            box["result"] = asyncio.run(rag_agent.run(question, deps=run_deps))
+        except BaseException as exc:  # noqa: BLE001 - re-raised on caller thread
+            box["error"] = exc
+
+    thread = threading.Thread(target=_worker)
+    thread.start()
+    thread.join()
+    if "error" in box:
+        raise box["error"]
+    return box["result"]
+
+
 def run_rag(
     question: str,
     mode: Literal["bm25", "vector"],
@@ -80,7 +112,7 @@ def run_rag(
     # concurrently, so we must not mutate its mode/top_k or its retrieved list.
     run_deps = RAGDeps(bm25=deps.bm25, vector=deps.vector, mode=mode, top_k=top_k)
 
-    result = rag_agent.run_sync(question, deps=run_deps)
+    result = _run_agent(question, run_deps)
 
     return RAGResult(
         answer=result.output,
