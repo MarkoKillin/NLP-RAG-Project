@@ -1,0 +1,29 @@
+Transformer Architectures
+
+The transformer was introduced in the 2017 paper Attention Is All You Need. It removed recurrence entirely and replaced it with attention, which made training parallelisable across sequence positions and allowed models to scale far beyond what recurrent networks could reach.
+
+Self-attention
+
+Each input token is projected into three vectors: a query, a key, and a value. The attention weight between two positions is the scaled dot product of one position's query with another's key, passed through a softmax across the sequence. The output at each position is the weighted sum of value vectors. Scaling by the square root of the key dimension keeps the dot products from growing large enough to push the softmax into saturated regions where gradients vanish.
+
+Multi-head attention runs several attention operations in parallel with separate projection matrices, then concatenates the results. Different heads learn to attend to different relationships, some tracking syntactic dependencies and others tracking coreference or positional patterns.
+
+Positional information
+
+Because attention is permutation invariant, position has to be injected explicitly. The original paper added fixed sinusoidal encodings to the input embeddings. Later models learned positional embeddings instead, and more recent architectures use rotary position embeddings, which encode relative position by rotating the query and key vectors as a function of their index.
+
+Encoder and decoder stacks
+
+The original architecture has an encoder that reads the input bidirectionally and a decoder that generates output left to right. The decoder uses causal masking so that a position can only attend to earlier positions, preserving the autoregressive property needed for generation. Cross-attention layers in the decoder attend to the encoder output.
+
+Three families descend from this design. Encoder-only models such as BERT are trained with masked language modelling, where a fraction of input tokens are replaced with a mask token and the model predicts them from both directions. These models produce strong contextual representations and are used for classification, tagging, and retrieval. Decoder-only models such as GPT are trained to predict the next token and are used for generation. Encoder-decoder models such as T5 frame every task as text-to-text.
+
+Cost and context length
+
+The attention matrix is quadratic in sequence length, since every position attends to every other. A sequence of ten thousand tokens requires a hundred million attention scores per head per layer. This quadratic cost is the main constraint on context length and has motivated a long line of work on sparse, linear, and approximate attention, as well as engineering solutions such as FlashAttention that reduce memory traffic without changing the mathematics.
+
+Pre-training and fine-tuning
+
+Transformers are typically pre-trained on very large unlabelled corpora and then adapted to specific tasks. Full fine-tuning updates every parameter, which is costly for large models. Parameter-efficient methods such as LoRA instead train small low-rank update matrices while keeping the base weights frozen, achieving comparable quality at a fraction of the memory cost.
+
+Tokenization matters more than it appears. Subword schemes such as byte-pair encoding and WordPiece split rare words into pieces, which bounds vocabulary size while keeping common words intact.

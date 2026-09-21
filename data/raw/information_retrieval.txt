@@ -1,0 +1,25 @@
+Information Retrieval and Ranking
+
+Information retrieval is the task of finding documents in a collection that satisfy a user's information need, usually expressed as a short keyword query. The classical setting assumes a fixed collection, an offline indexing stage, and an online ranking stage that must return results in milliseconds.
+
+The inverted index
+
+The central data structure is the inverted index. Rather than storing, for each document, the list of terms it contains, the index stores for each term the list of documents that contain it. Each entry in this posting list records a document identifier and the term frequency, and often the positions at which the term occurs so that phrase queries can be answered. Query processing intersects or unions the posting lists of the query terms, which is far cheaper than scanning the collection.
+
+Text is normalised before indexing. Tokenization splits the character stream into terms, case folding maps everything to lowercase, stopword removal discards extremely frequent function words such as the and of, and stemming reduces inflected forms to a common root so that running, runs, and ran can all match the query run. The Porter stemmer is the most widely used algorithm for English. The same normalisation must be applied to queries, otherwise index terms and query terms will not line up.
+
+Term weighting
+
+Not all matches are equally informative. TF-IDF weights a term by how often it appears in a document, multiplied by the inverse of how many documents contain it, so that rare terms count for more than common ones. Raw term frequency is usually dampened with a logarithm, since a document mentioning a term twenty times is not twenty times more relevant than one mentioning it once.
+
+BM25 refines this into a probabilistic ranking function. Its term frequency component saturates: additional occurrences contribute progressively less, controlled by the parameter k1, which is typically set between 1.2 and 2.0. It also normalises for document length through the parameter b, usually 0.75, so that long documents are not favoured simply for containing more words. The inverse document frequency component is derived from the probabilistic relevance framework rather than assumed. BM25 remains a strong baseline that is difficult to beat without substantial machine learning.
+
+Dense and hybrid retrieval
+
+Lexical methods fail when the query and the document express the same idea with different words, a problem known as vocabulary mismatch. Dense retrieval encodes queries and passages into a shared vector space and ranks by cosine similarity, which handles paraphrase well but can miss exact identifiers, rare proper nouns, and numeric codes that lexical matching finds trivially.
+
+Because the two approaches fail in different ways, combining them usually beats either alone. Reciprocal Rank Fusion merges ranked lists by summing one over a constant plus the rank of each item, which requires no score calibration between systems. A common alternative is to retrieve a few hundred candidates cheaply and then reorder them with a cross-encoder that reads the query and passage together.
+
+Evaluation
+
+Retrieval quality is measured against relevance judgements. Precision at k is the fraction of the top k results that are relevant, recall at k is the fraction of all relevant documents that appear in the top k, and mean reciprocal rank averages the inverse rank of the first relevant result. Normalised discounted cumulative gain extends this to graded relevance.

@@ -1,5 +1,9 @@
-from typing import Any, Literal, TypedDict
+from dataclasses import dataclass
+from typing import Literal, Protocol
+
 from pydantic import BaseModel
+
+RetrievalMode = Literal["bm25", "vector", "hybrid"]
 
 
 class RetrievedChunkModel(BaseModel):
@@ -12,24 +16,21 @@ class RetrievedChunkModel(BaseModel):
 
 class RAGResult(BaseModel):
     answer: str
-    retrieval_mode: Literal["bm25", "vector"]
+    retrieval_mode: RetrievalMode
+    # Empty means retrieval found nothing. run_rag then skips the LLM and puts
+    # the canned refusal in `answer`.
     chunks: list[RetrievedChunkModel]
 
 
-class RAGDeps(BaseModel):
-    model_config = {"arbitrary_types_allowed": True}
-    bm25: Any
-    vector: Any
-    mode: Literal["bm25", "vector"] = "bm25"
-    top_k: int = 5
-    # Populated by the retrieve_chunks tool so the actual retrieved chunks can
-    # be attached to the result instead of round-tripping through the LLM.
-    retrieved: list[RetrievedChunkModel] = []
+class Retriever(Protocol):
+    def search(self, query: str, top_k: int = 5) -> list[RetrievedChunkModel]: ...
 
 
-class RetrievedChunk(TypedDict):
-    id: int
-    source: str
-    chunk_index: int
-    content: str
-    score: float
+@dataclass
+class Retrievers:
+    bm25: Retriever
+    vector: Retriever
+    hybrid: Retriever
+
+    def get(self, mode: RetrievalMode) -> Retriever:
+        return {"bm25": self.bm25, "vector": self.vector, "hybrid": self.hybrid}[mode]

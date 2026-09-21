@@ -1,0 +1,25 @@
+Word Embeddings and Distributional Semantics
+
+The distributional hypothesis states that words appearing in similar contexts tend to have similar meanings. This idea, usually credited to Zellig Harris and popularised by John Firth's remark that you shall know a word by the company it keeps, is the foundation of nearly all modern lexical semantics.
+
+Count-based methods
+
+The earliest distributional models built a large co-occurrence matrix. Each row corresponds to a target word, each column to a context word, and each cell counts how often the two appear together within a fixed window. Raw counts are dominated by frequent function words, so they are usually reweighted with pointwise mutual information. The resulting matrix is enormous and sparse, so dimensionality reduction such as singular value decomposition is applied to produce dense vectors of a few hundred dimensions. Latent Semantic Analysis is the best known example of this family.
+
+Prediction-based methods
+
+Word2vec, introduced by Mikolov and colleagues in 2013, reframed the problem as prediction rather than counting. The skip-gram variant trains a shallow network to predict the context words surrounding a target word, while the continuous bag-of-words variant predicts the target from its context. Training the full softmax over a large vocabulary is expensive, so word2vec uses negative sampling: for each true context word, a handful of random words are drawn as negatives and the model learns to separate them.
+
+GloVe took a different route, fitting vectors directly to the logarithm of global co-occurrence counts. Despite the different derivation, the resulting vectors behave similarly, and later work showed that word2vec with negative sampling is implicitly factorising a shifted PMI matrix.
+
+Properties of the vector space
+
+Trained embeddings place semantically related words close together under cosine similarity. Cosine is preferred over Euclidean distance because vector magnitude tends to track word frequency rather than meaning, and normalising away the magnitude removes that nuisance factor. The spaces also exhibit approximate linear structure in the famous analogy arithmetic, where the vector for king minus man plus woman lands near queen, though this behaviour is fragile and depends heavily on how the analogy set is constructed.
+
+Limitations
+
+Static embeddings assign exactly one vector per word type, so every sense of a polysemous word is collapsed into a single point. The word bank receives one vector that averages the financial and riverside senses. They also inherit and amplify social biases present in the training corpus, a problem documented extensively in work on gender bias in word embeddings.
+
+Out-of-vocabulary words are a second weakness. A word never seen in training has no vector at all. FastText addresses this by representing each word as a bag of character n-grams, so an unseen word can still be assembled from its subword pieces.
+
+Contextual embeddings such as those produced by ELMo and BERT resolve the polysemy problem by generating a different vector for each occurrence of a word depending on its sentence. This shift from static to contextual representations is the main reason static embeddings are now used mostly as a baseline or in settings where the cost of a large model is prohibitive.

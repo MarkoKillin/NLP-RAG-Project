@@ -22,4 +22,7 @@ Thumbs.db
 .coverage
 htmlcov/
 uv.lock
+*.egg-info/
+# Built at container start into a mounted volume; never bake a stale one in.
+index/
 

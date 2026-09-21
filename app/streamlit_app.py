@@ -1,25 +1,25 @@
 import streamlit as st
 
 from rag.config import TOP_K
-from rag.rag_agent import build_rag_deps, run_rag
-
+from rag.rag_agent import run_rag
+from rag.retriever import build_retrievers
 
 st.set_page_config(page_title="RAG Chatbot", page_icon="🤖")
 st.title("RAG Chatbot")
 
 
 def render_sources(sources: list[dict]) -> None:
-    with st.expander("View sources"):
+    with st.expander(f"View sources ({len(sources)})"):
         for src in sources:
             st.markdown(
                 f"- **{src['source']}** "
-                f"(chunk {src['chunk_index']}, score={src['score']:.3f})"
+                f"(chunk {src['chunk_index']}, score={src['score']:.4f})"
             )
 
 
 @st.cache_resource
-def get_rag_deps():
-    return build_rag_deps()
+def get_retrievers():
+    return build_retrievers()
 
 
 if "messages" not in st.session_state:
@@ -27,19 +27,23 @@ if "messages" not in st.session_state:
 
 with st.sidebar:
     st.header("Configuration")
-    mode = st.selectbox("Retrieval mode", ["bm25", "vector"])
+    mode = st.selectbox("Retrieval mode", ["bm25", "vector", "hybrid"])
+    top_k = st.slider("Chunks retrieved (top_k)", min_value=1, max_value=20, value=TOP_K)
     st.info(
-        "**BM25**: Lexical search using keyword matching\n\n"
-        "**Vector**: Semantic search using embeddings"
+        "**BM25**: lexical search over stemmed, stopword-filtered tokens\n\n"
+        "**Vector**: semantic search over embeddings\n\n"
+        "**Hybrid**: Reciprocal Rank Fusion of both. Its scores are RRF scores, "
+        "so they are much smaller than the other two modes and not comparable to them."
     )
 
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
-        if message["role"] == "assistant" and "sources" in message:
-            sources = message["sources"] or []
-            if sources:
-                render_sources(sources)
+        sources = message.get("sources") or []
+        if sources:
+            render_sources(sources)
+        elif message["role"] == "assistant" and message.get("ungrounded"):
+            st.warning("No passages were retrieved for this question.")
 
 if prompt := st.chat_input("Ask a question about the indexed documents:"):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -52,23 +56,27 @@ if prompt := st.chat_input("Ask a question about the indexed documents:"):
                 result = run_rag(
                     question=prompt,
                     mode=mode,
-                    deps=get_rag_deps(),
-                    top_k=TOP_K,
+                    retrievers=get_retrievers(),
+                    top_k=top_k,
                 )
 
                 answer = result.answer
                 sources = [c.model_dump() for c in result.chunks]
 
                 st.markdown(answer)
-
                 if sources:
                     render_sources(sources)
+                else:
+                    # Empty sources means retrieval found nothing, so run_rag
+                    # never called the model. Don't let that pass for an answer.
+                    st.warning("No passages were retrieved for this question.")
 
                 st.session_state.messages.append(
                     {
                         "role": "assistant",
                         "content": answer,
                         "sources": sources,
+                        "ungrounded": not sources,
                     }
                 )
             except Exception as e:

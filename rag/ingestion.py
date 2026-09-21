@@ -3,13 +3,17 @@ from pathlib import Path
 
 import numpy as np
 
-from rag.bm25 import BM25Index, tokenize
-from rag.config import EMBEDDING_DIM
+from rag.bm25 import BM25Index
+from rag.config import BM25_REMOVE_STOPWORDS, BM25_STEM, EMBEDDING_MODEL_NAME
 from rag.embedding_model import EmbeddingModel
 
 
 INDEX_FILE = "index.pkl"
 VECTORS_FILE = "vectors.npy"
+
+# Bump when a layout or tokenizer change makes older indexes unusable, so
+# load_index raises instead of returning wrong rankings.
+INDEX_FORMAT_VERSION = 2
 
 
 def chunk_text(text: str, chunk_size: int = 400, chunk_overlap: int = 50) -> list[str]:
@@ -22,14 +26,15 @@ def chunk_text(text: str, chunk_size: int = 400, chunk_overlap: int = 50) -> lis
         )
 
     words = text.split()
-    if len(words) <= chunk_size:
-        return [text]
-
     chunks = []
     start = 0
     while start < len(words):
         end = min(start + chunk_size, len(words))
         chunks.append(" ".join(words[start:end]))
+        # Without this, a 401-word doc at (400, 50) emits a 51-word tail chunk
+        # repeating 50 words of chunk 0, inflating BM25 document frequency.
+        if end == len(words):
+            break
         start += chunk_size - chunk_overlap
 
     return chunks
@@ -44,7 +49,7 @@ def load_documents(raw_data_dir: Path) -> list[tuple[str, str]]:
         return documents
 
     for ext in ["*.txt", "*.md"]:
-        for file_path in raw_data_dir.glob(ext):
+        for file_path in sorted(raw_data_dir.glob(ext)):
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
@@ -88,10 +93,10 @@ def build_index(
             all_chunks.append(chunk)
     print(f"Created {len(all_chunks)} chunks")
 
-    print("Building BM25 index...")
-    bm25 = BM25Index()
+    print(f"Building BM25 index (stem={BM25_STEM}, remove_stopwords={BM25_REMOVE_STOPWORDS})...")
+    bm25 = BM25Index(stem=BM25_STEM, remove_stopwords=BM25_REMOVE_STOPWORDS)
     for chunk in all_chunks:
-        bm25.add(tokenize(chunk))
+        bm25.add(chunk)
     bm25.finalize()
 
     print("Computing embeddings...")
@@ -105,13 +110,6 @@ def build_index(
     vectors = np.vstack(batches).astype(np.float32)
     print(f"Computed {len(vectors)} embeddings of dimension {vectors.shape[1]}")
 
-    if vectors.shape[1] != EMBEDDING_DIM:
-        raise ValueError(
-            f"Embedding dimension mismatch: model produced {vectors.shape[1]}, "
-            f"but EMBEDDING_DIM is configured as {EMBEDDING_DIM}. "
-            "Update EMBEDDING_DIM to match the embedding model."
-        )
-
     # Pre-normalize so cosine similarity reduces to a dot product at query time.
     norms = np.linalg.norm(vectors, axis=1, keepdims=True)
     norms[norms == 0] = 1.0
@@ -119,6 +117,18 @@ def build_index(
 
     print(f"Writing index to {index_dir}...")
     with open(index_dir / INDEX_FILE, "wb") as f:
-        pickle.dump({"bm25": bm25, "chunks": chunk_metadata}, f)
+        pickle.dump(
+            {
+                "format_version": INDEX_FORMAT_VERSION,
+                # Checked on load; see load_index for why the name matters.
+                "embedding_model": EMBEDDING_MODEL_NAME,
+                "embedding_dim": int(vectors.shape[1]),
+                "chunk_size": chunk_size,
+                "chunk_overlap": chunk_overlap,
+                "bm25": bm25,
+                "chunks": chunk_metadata,
+            },
+            f,
+        )
     np.save(index_dir / VECTORS_FILE, vectors)
     print(f"Index built with {len(all_chunks)} chunks in {index_dir}")
