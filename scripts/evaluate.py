@@ -152,7 +152,7 @@ def main() -> None:
         sys.exit(1)
     print(f"Questions: {len(usable)}/{len(questions)} usable")
 
-    retrievers = build_retrievers(args.index_dir)
+    retrievers = build_retrievers(index=index)
     rows, by_type = [], {}
     for mode in args.modes:
         overall, per_type = score_mode(retrievers.get(mode), usable, judgements, args.k)

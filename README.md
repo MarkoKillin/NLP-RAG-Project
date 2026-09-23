@@ -81,6 +81,11 @@ python -m scripts.evaluate --modes bm25       # no Ollama needed
 python -m scripts.evaluate --ablation         # compare BM25 tokenizer settings
 ```
 
+The Docker image bakes in the NLTK stopword corpus at build time. Outside Docker
+the corpus downloads once, the first time BM25 runs with stopword removal enabled
+(`BM25_REMOVE_STOPWORDS=1`, or the `--ablation` comparison). Default runs,
+including `--modes bm25`, never touch the corpus and stay offline.
+
 It reports Recall@k, MRR@k and Hit@k overall and broken down by question type
 (`lexical`, `semantic`, `mixed`), so the lexical/semantic trade-off shows up instead of
 averaging away.

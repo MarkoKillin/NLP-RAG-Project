@@ -8,7 +8,6 @@ class EmbeddingModel:
     def __init__(self, model_name: str = EMBEDDING_MODEL_NAME, base_url: str = OLLAMA_BASE_URL):
         self.model_name = model_name
         self.base_url = base_url.rstrip("/")
-        self.dimension = None
 
     def encode(self, texts: list[str]) -> np.ndarray:
         if isinstance(texts, str):
@@ -22,9 +21,4 @@ class EmbeddingModel:
         resp.raise_for_status()
         data = resp.json()
 
-        arr = np.array(data["embeddings"], dtype="float32")
-
-        if self.dimension is None:
-            self.dimension = arr.shape[1]
-
-        return arr
+        return np.array(data["embeddings"], dtype="float32")

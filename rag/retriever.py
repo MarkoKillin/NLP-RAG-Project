@@ -157,13 +157,18 @@ class HybridRetriever:
         return [by_id[chunk_id].model_copy(update={"score": score}) for chunk_id, score in ordered]
 
 
-def build_retrievers(index_dir: Path | None = None) -> Retrievers:
-    """Load the index once and build all three retrievers over it.
+def build_retrievers(
+    index_dir: Path | None = None, index: LoadedIndex | None = None
+) -> Retrievers:
+    """Build all three retrievers over one in-memory copy of the index.
 
-    Call once per process and reuse: this unpickles the index, then hands the
-    same copy to both retrievers instead of letting each load its own.
+    Call once per process and reuse. Pass an already-loaded ``index`` to reuse it
+    (scripts/evaluate.py does this, avoiding a second unpickle); otherwise the
+    index is loaded from ``index_dir`` and the same copy is handed to every
+    retriever instead of letting each load its own.
     """
-    index = load_index(index_dir or INDEX_DIR)
+    if index is None:
+        index = load_index(index_dir or INDEX_DIR)
     bm25 = BM25Retriever(index)
     vector = VectorRetriever(index, EmbeddingModel(EMBEDDING_MODEL_NAME))
     return Retrievers(bm25=bm25, vector=vector, hybrid=HybridRetriever(bm25, vector))

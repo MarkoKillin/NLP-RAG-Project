@@ -28,7 +28,15 @@ if "messages" not in st.session_state:
 with st.sidebar:
     st.header("Configuration")
     mode = st.selectbox("Retrieval mode", ["bm25", "vector", "hybrid"])
-    top_k = st.slider("Chunks retrieved (top_k)", min_value=1, max_value=20, value=TOP_K)
+    # TOP_K is configurable and may sit outside the default 1..20 range; widen the
+    # ceiling and clamp the initial value so the slider never raises on load.
+    slider_max = max(20, TOP_K)
+    top_k = st.slider(
+        "Chunks retrieved (top_k)",
+        min_value=1,
+        max_value=slider_max,
+        value=min(max(TOP_K, 1), slider_max),
+    )
     st.info(
         "**BM25**: lexical search over stemmed, stopword-filtered tokens\n\n"
         "**Vector**: semantic search over embeddings\n\n"

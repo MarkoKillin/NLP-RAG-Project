@@ -18,6 +18,11 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir --upgrade pip uv && \
     uv pip install --system --no-cache -r requirements.txt
 
+# Stopword corpus for the BM25 tokenizer, fetched at build time so container
+# start needs no network. /usr/local/share/nltk_data is a default NLTK search
+# path. See rag/bm25.py.
+RUN python -m nltk.downloader -d /usr/local/share/nltk_data stopwords
+
 COPY . .
 RUN chmod +x /app/scripts/docker-entrypoint.sh
 

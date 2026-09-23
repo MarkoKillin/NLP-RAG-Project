@@ -24,12 +24,18 @@ certifi==2025.10.5
 charset-normalizer==3.4.4
     # via requests
 click==8.3.0
-    # via streamlit
+    # via
+    #   nltk
+    #   streamlit
+cloudpickle==3.1.2
+    # via joblib
 colorama==0.4.6
     # via
     #   click
     #   griffe
     #   tqdm
+defusedxml==0.7.1
+    # via nltk
 distro==1.9.0
     # via openai
 eval-type-backport==0.2.2 ; python_full_version < '3.11'
@@ -69,6 +75,8 @@ jinja2==3.1.6
     #   pydeck
 jiter==0.11.1
     # via openai
+joblib==1.6.0
+    # via nltk
 jsonschema==4.25.1
     # via altair
 jsonschema-specifications==2025.9.1
@@ -79,6 +87,8 @@ markupsafe==3.0.3
     # via jinja2
 narwhals==2.12.0
     # via altair
+nltk==3.10.3
+    # via rag-chat
 numpy==2.2.6 ; python_full_version < '3.11'
     # via
     #   pandas
@@ -129,6 +139,8 @@ referencing==0.37.0
     # via
     #   jsonschema
     #   jsonschema-specifications
+regex==2026.9.10
+    # via nltk
 requests==2.32.5
     # via
     #   rag-chat
@@ -156,7 +168,9 @@ toml==0.10.2
 tornado==6.5.2
     # via streamlit
 tqdm==4.67.1
-    # via openai
+    # via
+    #   nltk
+    #   openai
 typing-extensions==4.15.0
     # via
     #   altair
