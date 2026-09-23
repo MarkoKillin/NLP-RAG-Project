@@ -13,18 +13,14 @@ _TOKEN_RE = re.compile(r"\w+", re.UNICODE)
 
 @lru_cache(maxsize=1)
 def _load_stopwords() -> frozenset[str]:
-    r"""English stopwords from NLTK, tokenized the same way as the corpus.
+    r"""NLTK English stopwords, tokenized the same way as the corpus.
 
-    Loaded lazily and cached, so only indexes/queries built with
-    remove_stopwords=True pull it in. Importing this module (and the vector and
-    hybrid paths, which never strip stopwords) stays offline and does not depend
-    on the corpus being present.
+    Cached and loaded lazily, so only remove_stopwords=True pulls it in; the
+    vector and hybrid paths stay offline.
 
-    NLTK's list holds apostrophe forms ("don't", "you're"); the \w+ tokenizer
-    splits those into fragments ("don"/"t"), so the list is run through _TOKEN_RE
-    to store the fragments the tokenizer actually produces. Otherwise those
-    entries could never match. The corpus is baked into the Docker image at build
-    time; the fallback covers a fresh local checkout and downloads once.
+    NLTK stores apostrophe forms ("don't"), which the \w+ tokenizer splits into
+    fragments ("don", "t"). Run the list through _TOKEN_RE so it matches what the
+    tokenizer produces. The fallback downloads the corpus once on a fresh checkout.
     """
     try:
         words = stopwords.words("english")
@@ -34,10 +30,9 @@ def _load_stopwords() -> frozenset[str]:
     return frozenset(_TOKEN_RE.findall(" ".join(words).lower()))
 
 
-# One stemmer per thread. snowballstemmer objects carry per-call cursor state and
-# are not thread-safe, and Streamlit runs each session in its own thread. Kept at
-# module level (thread-local, not a BM25Index attribute) so the index stays
-# picklable; a stemmer stored on the instance would get serialized with it.
+# One stemmer per thread: snowballstemmer holds per-call cursor state and isn't
+# thread-safe, and Streamlit runs each session on its own thread. Kept at module
+# level, not on BM25Index, so the pickled index doesn't drag a stemmer along.
 _thread_local = threading.local()
 
 

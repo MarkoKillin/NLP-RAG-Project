@@ -86,7 +86,7 @@ def run_rag(
 ) -> RAGResult:
     chunks = retrievers.get(mode).search(question, top_k=top_k)
 
-    # Deliberate: no passages means no grounds for an answer, so skip the LLM.
+    # No passages means no grounds for an answer, so skip the LLM.
     if not chunks:
         return RAGResult(answer=NO_CONTEXT_ANSWER, retrieval_mode=mode, chunks=[])
 

@@ -28,8 +28,8 @@ if "messages" not in st.session_state:
 with st.sidebar:
     st.header("Configuration")
     mode = st.selectbox("Retrieval mode", ["bm25", "vector", "hybrid"])
-    # TOP_K is configurable and may sit outside the default 1..20 range; widen the
-    # ceiling and clamp the initial value so the slider never raises on load.
+    # TOP_K is configurable and can exceed 20. Widen the ceiling and clamp the
+    # starting value so the slider doesn't error on load.
     slider_max = max(20, TOP_K)
     top_k = st.slider(
         "Chunks retrieved (top_k)",

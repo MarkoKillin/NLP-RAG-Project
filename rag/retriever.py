@@ -163,9 +163,8 @@ def build_retrievers(
     """Build all three retrievers over one in-memory copy of the index.
 
     Call once per process and reuse. Pass an already-loaded ``index`` to reuse it
-    (scripts/evaluate.py does this, avoiding a second unpickle); otherwise the
-    index is loaded from ``index_dir`` and the same copy is handed to every
-    retriever instead of letting each load its own.
+    (scripts/evaluate.py does this, avoiding a second unpickle); otherwise it loads
+    from ``index_dir`` and hands the same copy to every retriever.
     """
     if index is None:
         index = load_index(index_dir or INDEX_DIR)
