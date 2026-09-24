@@ -28,3 +28,6 @@ Thumbs.db
 
 # Streamlit
 .streamlit/
+
+# Local env overrides; .env.example is committed
+.env

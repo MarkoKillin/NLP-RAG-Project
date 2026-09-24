@@ -3,36 +3,21 @@ import threading
 from collections import Counter
 from functools import lru_cache
 from math import log
+from pathlib import Path
 
-import nltk
 import snowballstemmer
-from nltk.corpus import stopwords
 
 _TOKEN_RE = re.compile(r"\w+", re.UNICODE)
+
+_STOPWORDS_FILE = Path(__file__).parent / "stopwords.txt"
 
 
 @lru_cache(maxsize=1)
 def _load_stopwords() -> frozenset[str]:
-    r"""NLTK English stopwords, tokenized the same way as the corpus.
-
-    Cached and loaded lazily, so only remove_stopwords=True pulls it in; the
-    vector and hybrid paths stay offline.
-
-    NLTK stores apostrophe forms ("don't"), which the \w+ tokenizer splits into
-    fragments ("don", "t"). Run the list through _TOKEN_RE so it matches what the
-    tokenizer produces. The fallback downloads the corpus once on a fresh checkout.
-    """
-    try:
-        words = stopwords.words("english")
-    except LookupError:
-        nltk.download("stopwords", quiet=True)
-        words = stopwords.words("english")
-    return frozenset(_TOKEN_RE.findall(" ".join(words).lower()))
+    text = _STOPWORDS_FILE.read_text(encoding="utf-8")
+    return frozenset(line.strip() for line in text.splitlines() if line.strip())
 
 
-# One stemmer per thread: snowballstemmer holds per-call cursor state and isn't
-# thread-safe, and Streamlit runs each session on its own thread. Kept at module
-# level, not on BM25Index, so the pickled index doesn't drag a stemmer along.
 _thread_local = threading.local()
 
 
@@ -45,13 +30,6 @@ def _stem_all(tokens: list[str]) -> list[str]:
 
 
 class BM25Index:
-    """BM25 over a tokenized corpus.
-
-    Tokenizer settings live on the index, not in module-level config. The query
-    path calls ``index.tokenize``, so documents and queries always go through
-    the same pipeline, and the settings travel with the pickled index.
-    """
-
     def __init__(
         self,
         k1: float = 1.5,
@@ -88,8 +66,6 @@ class BM25Index:
 
     def finalize(self) -> None:
         self.N = len(self.doc_lengths)
-        # Guard against an all-empty corpus: avgdl of 0 would divide-by-zero in
-        # the length-normalization term during search.
         self.avgdl = sum(self.doc_lengths) / self.N if self.N else 0.0
         if self.avgdl == 0.0:
             self.avgdl = 1.0

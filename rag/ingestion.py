@@ -4,16 +4,12 @@ from pathlib import Path
 import numpy as np
 
 from rag.bm25 import BM25Index
-from rag.config import BM25_REMOVE_STOPWORDS, BM25_STEM, EMBEDDING_MODEL_NAME
+from rag.config import settings
 from rag.embedding_model import EmbeddingModel
 
 
 INDEX_FILE = "index.pkl"
 VECTORS_FILE = "vectors.npy"
-
-# Bump when a layout or tokenizer change makes older indexes unusable, so
-# load_index raises instead of returning wrong rankings.
-INDEX_FORMAT_VERSION = 2
 
 
 def chunk_text(text: str, chunk_size: int = 400, chunk_overlap: int = 50) -> list[str]:
@@ -93,8 +89,8 @@ def build_index(
             all_chunks.append(chunk)
     print(f"Created {len(all_chunks)} chunks")
 
-    print(f"Building BM25 index (stem={BM25_STEM}, remove_stopwords={BM25_REMOVE_STOPWORDS})...")
-    bm25 = BM25Index(stem=BM25_STEM, remove_stopwords=BM25_REMOVE_STOPWORDS)
+    print(f"Building BM25 index (stem={settings.bm25_stem}, remove_stopwords={settings.bm25_remove_stopwords})...")
+    bm25 = BM25Index(stem=settings.bm25_stem, remove_stopwords=settings.bm25_remove_stopwords)
     for chunk in all_chunks:
         bm25.add(chunk)
     bm25.finalize()
@@ -119,9 +115,8 @@ def build_index(
     with open(index_dir / INDEX_FILE, "wb") as f:
         pickle.dump(
             {
-                "format_version": INDEX_FORMAT_VERSION,
                 # Checked on load; see load_index for why the name matters.
-                "embedding_model": EMBEDDING_MODEL_NAME,
+                "embedding_model": settings.embedding_model_name,
                 "embedding_dim": int(vectors.shape[1]),
                 "chunk_size": chunk_size,
                 "chunk_overlap": chunk_overlap,

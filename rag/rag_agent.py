@@ -5,12 +5,12 @@ from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.ollama import OllamaProvider
 
-from rag.config import OLLAMA_BASE_URL, OLLAMA_MODEL_NAME
+from rag.config import settings
 from rag.models import RAGResult, RetrievalMode, RetrievedChunkModel, Retrievers
 
 ollama_model = OpenAIChatModel(
-    model_name=OLLAMA_MODEL_NAME,
-    provider=OllamaProvider(base_url=f"{OLLAMA_BASE_URL}/v1"),
+    model_name=settings.ollama_model_name,
+    provider=OllamaProvider(base_url=f"{settings.ollama_base_url}/v1"),
 )
 
 

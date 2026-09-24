@@ -1,44 +1,53 @@
-import os
 from pathlib import Path
+
+from pydantic import Field, field_validator, model_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).parent.parent
 
 
-def _env_flag(name: str, default: bool) -> bool:
-    return os.getenv(name, "1" if default else "0").strip().lower() in {"1", "true", "yes", "on"}
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=BASE_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+
+    raw_data_dir: Path = BASE_DIR / "data" / "raw"
+    index_dir: Path = BASE_DIR / "index"
+
+    chunk_size: int = Field(default=400, gt=0)
+    chunk_overlap: int = Field(default=50, ge=0)
+
+    top_k: int = Field(default=5, ge=1)
+
+    bm25_stem: bool = True
+    bm25_remove_stopwords: bool = True
+
+    rrf_k: int = Field(default=60, gt=0)
+    hybrid_candidate_multiplier: int = Field(default=4, ge=1)
+
+    embedding_model_name: str = "hf.co/Snowflake/snowflake-arctic-embed-m-v1.5:BF16"
+
+    # arctic-embed is asymmetric so the query takes this prefix, set empty for a symmetric model.
+    embedding_query_prefix: str = "Represent this sentence for searching relevant passages: "
+
+    ollama_base_url: str = "http://ollama:11434"
+    ollama_model_name: str = "hf.co/google/gemma-2b-it"
+
+    @field_validator("ollama_base_url")
+    @classmethod
+    def _strip_trailing_slash(cls, value: str) -> str:
+        return value.rstrip("/")
+
+    @model_validator(mode="after")
+    def _overlap_below_size(self) -> "Settings":
+        if self.chunk_overlap >= self.chunk_size:
+            raise ValueError(
+                f"chunk_overlap ({self.chunk_overlap}) must be less than "
+                f"chunk_size ({self.chunk_size})"
+            )
+        return self
 
 
-RAW_DATA_DIR = Path(os.getenv("RAW_DATA_DIR", str(BASE_DIR / "data" / "raw")))
-INDEX_DIR = Path(os.getenv("INDEX_DIR", str(BASE_DIR / "index")))
-
-CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "400"))
-CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "50"))
-
-TOP_K = int(os.getenv("TOP_K", "5"))
-
-# Recorded in the index so queries tokenize the way the corpus did. The defaults
-# scored best in `scripts/evaluate.py --ablation` on the sample corpus (numbers in
-# the README). Re-run it on your own corpus.
-BM25_STEM = _env_flag("BM25_STEM", True)
-BM25_REMOVE_STOPWORDS = _env_flag("BM25_REMOVE_STOPWORDS", False)
-
-# RRF_K damps low-ranked hits; 60 comes from Cormack et al. Fusion needs deeper
-# lists than the final top_k, so each retriever returns
-# top_k * HYBRID_CANDIDATE_MULTIPLIER.
-RRF_K = int(os.getenv("RRF_K", "60"))
-HYBRID_CANDIDATE_MULTIPLIER = int(os.getenv("HYBRID_CANDIDATE_MULTIPLIER", "4"))
-
-EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME", "hf.co/Snowflake/snowflake-arctic-embed-m-v1.5:BF16")
-
-# arctic-embed is asymmetric. The query takes this prefix; documents are embedded
-# raw. Prefixing both sides hurts retrieval (applied in VectorRetriever.search).
-# Set empty for a symmetric model.
-EMBEDDING_QUERY_PREFIX = os.getenv(
-    "EMBEDDING_QUERY_PREFIX",
-    "Represent this sentence for searching relevant passages: ",
-)
-
-# Base Ollama URL without the OpenAI-compatible /v1 suffix.
-# The chat model appends /v1 itself; the embedding endpoint uses the bare host.
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://ollama:11434").rstrip("/")
-OLLAMA_MODEL_NAME = os.getenv("OLLAMA_MODEL_NAME", "hf.co/google/gemma-2b-it")
+settings = Settings()

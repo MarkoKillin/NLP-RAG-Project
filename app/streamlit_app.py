@@ -1,6 +1,6 @@
 import streamlit as st
 
-from rag.config import TOP_K
+from rag.config import settings
 from rag.rag_agent import run_rag
 from rag.retriever import build_retrievers
 
@@ -28,14 +28,12 @@ if "messages" not in st.session_state:
 with st.sidebar:
     st.header("Configuration")
     mode = st.selectbox("Retrieval mode", ["bm25", "vector", "hybrid"])
-    # TOP_K is configurable and can exceed 20. Widen the ceiling and clamp the
-    # starting value so the slider doesn't error on load.
-    slider_max = max(20, TOP_K)
+    slider_max = max(20, settings.top_k)
     top_k = st.slider(
         "Chunks retrieved (top_k)",
         min_value=1,
         max_value=slider_max,
-        value=min(max(TOP_K, 1), slider_max),
+        value=min(max(settings.top_k, 1), slider_max),
     )
     st.info(
         "**BM25**: lexical search over stemmed, stopword-filtered tokens\n\n"
@@ -75,8 +73,6 @@ if prompt := st.chat_input("Ask a question about the indexed documents:"):
                 if sources:
                     render_sources(sources)
                 else:
-                    # Empty sources means retrieval found nothing, so run_rag
-                    # never called the model. Don't let that pass for an answer.
                     st.warning("No passages were retrieved for this question.")
 
                 st.session_state.messages.append(

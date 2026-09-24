@@ -10,13 +10,13 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "mypy>=1.11",
-    "nltk>=3.9",
     "numpy>=2.2",
     # The slim distribution plus the one provider we use. The full pydantic-ai
     # metapackage also pulls in the SDKs for anthropic, boto3, cohere,
     # google-genai, groq and mistralai, which this project never touches, and
     # takes the install from 63 packages to 130.
     "pydantic-ai-slim[openai]>=1.1",
+    "pydantic-settings>=2.0",
     "requests>=2.32",
     "snowballstemmer>=3.0",
     "streamlit>=1.48",
@@ -25,6 +25,9 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["rag*", "app*"]
+
+[tool.setuptools.package-data]
+rag = ["stopwords.txt"]
 
 [dependency-groups]
 dev = [

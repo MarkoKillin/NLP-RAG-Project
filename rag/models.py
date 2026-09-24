@@ -17,8 +17,6 @@ class RetrievedChunkModel(BaseModel):
 class RAGResult(BaseModel):
     answer: str
     retrieval_mode: RetrievalMode
-    # Empty means retrieval found nothing. run_rag then skips the LLM and puts
-    # the canned refusal in `answer`.
     chunks: list[RetrievedChunkModel]
 
 

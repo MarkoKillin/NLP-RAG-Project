@@ -26,7 +26,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from rag.bm25 import BM25Index
-from rag.config import BM25_REMOVE_STOPWORDS, BM25_STEM, INDEX_DIR, TOP_K
+from rag.config import settings
 from rag.models import Retriever
 from rag.retriever import LoadedIndex, build_retrievers, load_index
 
@@ -112,7 +112,7 @@ def run_ablation(index: LoadedIndex, questions, judgements, k: int) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Evaluate retrieval quality.")
-    parser.add_argument("--k", type=int, default=TOP_K, help="Cutoff for the metrics.")
+    parser.add_argument("--k", type=int, default=settings.top_k, help="Cutoff for the metrics.")
     parser.add_argument(
         "--modes",
         nargs="+",
@@ -120,7 +120,7 @@ def main() -> None:
         choices=["bm25", "vector", "hybrid"],
     )
     parser.add_argument("--questions", type=Path, default=DEFAULT_QUESTIONS)
-    parser.add_argument("--index-dir", type=Path, default=INDEX_DIR)
+    parser.add_argument("--index-dir", type=Path, default=settings.index_dir)
     parser.add_argument(
         "--ablation",
         action="store_true",
@@ -131,7 +131,7 @@ def main() -> None:
     questions = json.loads(args.questions.read_text(encoding="utf-8"))
     index = load_index(args.index_dir)
     print(f"Index: {len(index.chunks)} chunks from {args.index_dir}")
-    print(f"BM25 tokenizer: stem={BM25_STEM}, remove_stopwords={BM25_REMOVE_STOPWORDS}")
+    print(f"BM25 tokenizer: stem={settings.bm25_stem}, remove_stopwords={settings.bm25_remove_stopwords}")
 
     # A question whose `must_contain` matches nothing is a broken judgement, not
     # a retrieval failure. Drop it loudly rather than scoring a guaranteed zero.

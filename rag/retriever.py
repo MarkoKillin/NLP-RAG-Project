@@ -6,15 +6,9 @@ from pathlib import Path
 import numpy as np
 
 from rag.bm25 import BM25Index
-from rag.config import (
-    EMBEDDING_MODEL_NAME,
-    EMBEDDING_QUERY_PREFIX,
-    HYBRID_CANDIDATE_MULTIPLIER,
-    INDEX_DIR,
-    RRF_K,
-)
+from rag.config import settings
 from rag.embedding_model import EmbeddingModel
-from rag.ingestion import INDEX_FILE, INDEX_FORMAT_VERSION, VECTORS_FILE
+from rag.ingestion import INDEX_FILE, VECTORS_FILE
 from rag.models import RetrievedChunkModel, Retrievers
 
 _REBUILD_HINT = "Rebuild it with: python -m scripts.build_index (or REBUILD_INDEX=1 in Docker)."
@@ -42,20 +36,11 @@ def load_index(index_dir: Path) -> LoadedIndex:
         data = pickle.load(f)
     vectors = np.load(vectors_path)
 
-    version = data.get("format_version")
-    if version != INDEX_FORMAT_VERSION:
-        raise ValueError(
-            f"Index format v{version} was built by an older version of this code "
-            f"(current is v{INDEX_FORMAT_VERSION}). {_REBUILD_HINT}"
-        )
-
-    # Compare model names, not shapes: two models at the same dimension give a
-    # dot product that computes fine and ranks garbage.
     built_with = data.get("embedding_model")
-    if built_with != EMBEDDING_MODEL_NAME:
+    if built_with != settings.embedding_model_name:
         raise ValueError(
             f"Index was built with embedding model {built_with!r} but "
-            f"EMBEDDING_MODEL_NAME is now {EMBEDDING_MODEL_NAME!r}. "
+            f"EMBEDDING_MODEL_NAME is now {settings.embedding_model_name!r}. "
             f"Query and document vectors would come from different models. {_REBUILD_HINT}"
         )
 
@@ -98,7 +83,7 @@ class VectorRetriever:
         # arctic-embed is asymmetric: prefix the query so it matches how the
         # documents were embedded. The prefix is empty for symmetric models
         # (configured via EMBEDDING_QUERY_PREFIX).
-        query_vec = self.embedding_model.encode([EMBEDDING_QUERY_PREFIX + query])[0].astype(np.float32)
+        query_vec = self.embedding_model.encode([settings.embedding_query_prefix + query])[0].astype(np.float32)
         if query_vec.shape[0] != self.vectors.shape[1]:
             raise ValueError(
                 f"Embedding dimension mismatch: the model returned {query_vec.shape[0]} dims "
@@ -132,8 +117,8 @@ class HybridRetriever:
         self,
         bm25: BM25Retriever,
         vector: VectorRetriever,
-        rrf_k: int = RRF_K,
-        candidate_multiplier: int = HYBRID_CANDIDATE_MULTIPLIER,
+        rrf_k: int = settings.rrf_k,
+        candidate_multiplier: int = settings.hybrid_candidate_multiplier,
     ):
         self.bm25 = bm25
         self.vector = vector
@@ -167,7 +152,7 @@ def build_retrievers(
     from ``index_dir`` and hands the same copy to every retriever.
     """
     if index is None:
-        index = load_index(index_dir or INDEX_DIR)
+        index = load_index(index_dir or settings.index_dir)
     bm25 = BM25Retriever(index)
-    vector = VectorRetriever(index, EmbeddingModel(EMBEDDING_MODEL_NAME))
+    vector = VectorRetriever(index, EmbeddingModel(settings.embedding_model_name))
     return Retrievers(bm25=bm25, vector=vector, hybrid=HybridRetriever(bm25, vector))
