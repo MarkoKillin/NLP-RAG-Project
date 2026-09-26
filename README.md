@@ -167,5 +167,7 @@ dimensions agree, nothing errors, and the rankings mean nothing.
   mid-sentence. Paragraph-aware splitting would be better.
 - `top_k=5` at 400-word chunks puts roughly 3.5k tokens into the prompt, which is a
   lot for a 2B model. Reduce `CHUNK_SIZE` or `TOP_K` if answers degrade.
-- The index is a pickle, so it does not survive refactors of `rag/bm25.py`.
-  `INDEX_FORMAT_VERSION` at least makes that fail loudly.
+- The index is a pickle, so it does not survive refactors of `rag/bm25.py`: a
+  changed `BM25Index` fails to unpickle. The only compatibility guard is the
+  embedding-model name stored in the index, which loading checks against
+  `EMBEDDING_MODEL_NAME`; it catches a model swap but not a code refactor.
