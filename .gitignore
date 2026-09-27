@@ -1,4 +1,4 @@
-# uv lockfile — not versioned; deps are frozen in requirements.txt
+# deps are frozen in requirements.txt
 uv.lock
 
 # Python
