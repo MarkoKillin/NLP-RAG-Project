@@ -36,7 +36,43 @@ def chunk_text(text: str, chunk_size: int = 400, chunk_overlap: int = 50) -> lis
     return chunks
 
 
-def load_documents(raw_data_dir: Path) -> list[tuple[str, str]]:
+def _row_to_text(row: dict) -> str:
+    """One table row as "column: value" pairs. Empty cells are dropped."""
+    return " | ".join(
+        f"{col}: {val}" for col, val in row.items() if str(val).strip()
+    )
+
+
+def _chunk_text_file(path: Path, chunk_size: int, chunk_overlap: int) -> list[str]:
+    content = path.read_text(encoding="utf-8")
+    if not content.strip():
+        return []
+    return chunk_text(content, chunk_size, chunk_overlap)
+
+
+def _chunk_table_file(path: Path, chunk_size: int, chunk_overlap: int) -> list[str]:
+    """One chunk per row. chunk_size/overlap do not apply to tabular data."""
+    import pandas as pd
+
+    frame = pd.read_csv(path) if path.suffix == ".csv" else pd.read_excel(path)
+    frame = frame.fillna("")
+    chunks = [_row_to_text(row) for row in frame.to_dict(orient="records")]
+    return [c for c in chunks if c]
+
+
+# Extension to a loader that returns the file's chunks.
+_LOADERS = {
+    ".txt": _chunk_text_file,
+    ".md": _chunk_text_file,
+    ".csv": _chunk_table_file,
+    ".xlsx": _chunk_table_file,
+}
+
+
+def load_documents(
+    raw_data_dir: Path, chunk_size: int = 400, chunk_overlap: int = 50
+) -> list[tuple[str, list[str]]]:
+    """Load and chunk every supported file. Returns (filename, chunks) pairs."""
     documents = []
     raw_data_dir = Path(raw_data_dir)
 
@@ -44,16 +80,17 @@ def load_documents(raw_data_dir: Path) -> list[tuple[str, str]]:
         print(f"Warning: Raw data directory {raw_data_dir} does not exist.")
         return documents
 
-    for ext in ["*.txt", "*.md"]:
-        for file_path in sorted(raw_data_dir.glob(ext)):
-            try:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-            except (OSError, UnicodeDecodeError) as e:
-                print(f"Error loading {file_path}: {e}")
-                continue
-            if content.strip():
-                documents.append((file_path.name, content))
+    for file_path in sorted(raw_data_dir.iterdir()):
+        loader = _LOADERS.get(file_path.suffix.lower())
+        if loader is None:
+            continue
+        try:
+            chunks = loader(file_path, chunk_size, chunk_overlap)
+        except (OSError, UnicodeDecodeError, ValueError) as e:
+            print(f"Error loading {file_path}: {e}")
+            continue
+        if chunks:
+            documents.append((file_path.name, chunks))
 
     return documents
 
@@ -66,7 +103,7 @@ def build_index(
     chunk_overlap: int = 50,
 ) -> None:
     print(f"Loading documents from {raw_data_dir}...")
-    documents = load_documents(raw_data_dir)
+    documents = load_documents(raw_data_dir, chunk_size, chunk_overlap)
     if not documents:
         raise ValueError(f"No documents found in {raw_data_dir}")
     print(f"Loaded {len(documents)} documents")
@@ -74,11 +111,9 @@ def build_index(
     index_dir = Path(index_dir)
     index_dir.mkdir(parents=True, exist_ok=True)
 
-    print("Chunking documents...")
     all_chunks: list[str] = []
     chunk_metadata: list[dict] = []
-    for filename, content in documents:
-        chunks = chunk_text(content, chunk_size, chunk_overlap)
+    for filename, chunks in documents:
         for idx, chunk in enumerate(chunks):
             chunk_metadata.append({
                 "id": len(all_chunks),

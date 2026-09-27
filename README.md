@@ -34,7 +34,7 @@ compare to the other two modes.
 
     root/
       app/streamlit_app.py
-      data/raw/                # Input documents (.txt, .md)
+      data/raw/                # Input documents (.txt, .md, .csv, .xlsx)
       eval/questions.json      # Labelled questions for retrieval evaluation
       index/                   # Built index (index.pkl, vectors.npy)
       rag/
@@ -52,7 +52,7 @@ compare to the other two modes.
 
 ## Running
 
-Put `.txt` or `.md` files in `data/raw/`, then:
+Put `.txt`, `.md`, `.csv` or `.xlsx` files in `data/raw/`, then:
 
 ``` bash
 docker-compose up --build
@@ -81,10 +81,8 @@ python -m scripts.evaluate --modes bm25       # no Ollama needed
 python -m scripts.evaluate --ablation         # compare BM25 tokenizer settings
 ```
 
-The Docker image bakes in the NLTK stopword corpus at build time. Outside Docker
-the corpus downloads once, the first time BM25 runs with stopword removal enabled
-(`BM25_REMOVE_STOPWORDS=1`, or the `--ablation` comparison). Default runs,
-including `--modes bm25`, never touch the corpus and stay offline.
+Stopwords for BM25 ship in the repo (`rag/stopwords.txt`), so no corpus is
+downloaded and every run, including `--modes bm25`, stays offline.
 
 It reports Recall@k, MRR@k and Hit@k overall and broken down by question type
 (`lexical`, `semantic`, `mixed`), so the lexical/semantic trade-off shows up instead of

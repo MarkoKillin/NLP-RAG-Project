@@ -80,9 +80,7 @@ class VectorRetriever:
         self.embedding_model = embedding_model
 
     def search(self, query: str, top_k: int = 5) -> list[RetrievedChunkModel]:
-        # arctic-embed is asymmetric: prefix the query so it matches how the
-        # documents were embedded. The prefix is empty for symmetric models
-        # (configured via EMBEDDING_QUERY_PREFIX).
+        # Prefix the query for asymmetric embedders; see EMBEDDING_QUERY_PREFIX.
         query_vec = self.embedding_model.encode([settings.embedding_query_prefix + query])[0].astype(np.float32)
         if query_vec.shape[0] != self.vectors.shape[1]:
             raise ValueError(

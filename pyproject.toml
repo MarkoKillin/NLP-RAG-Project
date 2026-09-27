@@ -11,10 +11,8 @@ requires-python = ">=3.10"
 dependencies = [
     "mypy>=1.11",
     "numpy>=2.2",
-    # The slim distribution plus the one provider we use. The full pydantic-ai
-    # metapackage also pulls in the SDKs for anthropic, boto3, cohere,
-    # google-genai, groq and mistralai, which this project never touches, and
-    # takes the install from 63 packages to 130.
+    "openpyxl>=3.1",
+    "pandas>=2.2",
     "pydantic-ai-slim[openai]>=1.1",
     "pydantic-settings>=2.0",
     "requests>=2.32",

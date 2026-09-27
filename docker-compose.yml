@@ -29,8 +29,8 @@ services:
       - OLLAMA_BASE_URL=http://ollama:11434
       - OLLAMA_MODEL_NAME=${OLLAMA_MODEL_NAME:-hf.co/google/gemma-2b-it}
       - EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME:-hf.co/Snowflake/snowflake-arctic-embed-m-v1.5:BF16}
-      # Prefix arctic-embed prepends to queries. Empty it for a symmetric model;
-      # the no-colon default form keeps an explicitly-set empty value.
+      # Query prefix for asymmetric embedders like arctic-embed; empty for symmetric.
+      # The colon-less ${VAR-default} preserves an explicitly-set empty value.
       - "EMBEDDING_QUERY_PREFIX=${EMBEDDING_QUERY_PREFIX-Represent this sentence for searching relevant passages: }"
       - RAW_DATA_DIR=/app/data/raw
       - INDEX_DIR=/app/index
@@ -41,10 +41,8 @@ services:
       - HYBRID_CANDIDATE_MULTIPLIER=${HYBRID_CANDIDATE_MULTIPLIER:-4}
       - BM25_STEM=${BM25_STEM:-1}
       - BM25_REMOVE_STOPWORDS=${BM25_REMOVE_STOPWORDS:-0}
-      # Set to 1 to force a rebuild. You need this after changing
-      # EMBEDDING_MODEL_NAME, CHUNK_SIZE, CHUNK_OVERLAP or either BM25_* flag,
-      # since each index belongs to one set of those settings. On a mismatch the
-      # app refuses to start instead of returning wrong results.
+      # Rebuild after changing the embedding model, chunk size, or BM25 flags.
+      # The app refuses to start on a mismatch rather than return wrong results.
       - REBUILD_INDEX=${REBUILD_INDEX:-0}
     depends_on:
       ollama:
