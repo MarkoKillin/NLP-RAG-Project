@@ -1,0 +1,31 @@
+Coffee Brewing Methods
+
+Coffee brewing is the process of extracting soluble compounds from ground coffee using hot or cold water. Different methods vary in grind size, the ratio of coffee to water, brew time, and the pressure or temperature applied. These variables shape the strength, body, and flavor of the final cup. The sections below cover the main brewing methods and the general factors that affect taste.
+
+Espresso
+Espresso uses pressure, around 9 bars, to force hot water through a compacted bed of finely ground coffee. Grind size is very fine, similar to table salt or finer. The typical ratio is about 1:2, for example 18 grams of coffee to 36 grams of liquid espresso. Brew time is short, usually 25 to 30 seconds. The result is a concentrated, syrupy shot with heavy body, intense flavor, and a layer of crema on top. Espresso forms the base for milk drinks such as lattes and cappuccinos.
+
+Pour-over (V60)
+The V60 is a cone-shaped dripper that relies on gravity and a controlled pour of hot water over a paper filter. Grind size is medium-fine, roughly like table salt. A common ratio is 1:16, for example 20 grams of coffee to 320 grams of water. Total brew time is about 2.5 to 3.5 minutes, including a short bloom where water is added first to release trapped gas. The paper filter removes most oils and fine particles, giving a clean, bright cup that highlights acidity and delicate aromatic notes.
+
+French press
+The French press is an immersion method where coffee steeps directly in water, then a metal mesh plunger separates the grounds. Grind size is coarse, similar to sea salt. A typical ratio is 1:15, for example 30 grams of coffee to 450 grams of water. Steep time is about 4 minutes before plunging. Because the metal filter lets oils and fine sediment pass through, the cup is full-bodied, heavy, and rich, with a rounded, less bright flavor.
+
+AeroPress
+The AeroPress combines immersion and pressure. Coffee steeps in a chamber, then manual plunger pressure pushes water through a paper or metal filter. Grind size is medium to medium-fine and can be adjusted for the recipe. A common ratio is around 1:15, for example 15 grams of coffee to 225 grams of water, though concentrated recipes use less water. Brew time is short, usually 1 to 2 minutes. The result is smooth and clean with low bitterness, and the method is flexible enough to mimic espresso-style or filter-style cups.
+
+Cold brew
+Cold brew steeps coarse grounds in cold or room-temperature water for a long time, with no heat. Grind size is coarse, like the French press or coarser. Ratios are stronger by weight, often 1:8 for a concentrate that is later diluted, or about 1:15 for ready-to-drink. Steep time is long, typically 12 to 24 hours, followed by filtering. Because low temperature extracts fewer acids and bitter compounds, the result is smooth, low in acidity, sweet, and mellow.
+
+Moka pot
+The moka pot is a stovetop brewer that uses steam pressure to push water up through a basket of coffee. Grind size is fine to medium-fine, coarser than espresso but finer than drip. A typical ratio is about 1:10, for example 20 grams of coffee to 200 grams of water. Brew time is roughly 4 to 5 minutes as the pot heats. The cup is strong, bold, and concentrated, closer to espresso in intensity though without true crema, and it can taste bitter if overheated.
+
+Drip machine
+An automatic drip machine heats water and disperses it over a bed of coffee in a paper or metal filter basket. Grind size is medium, similar to sand. A common ratio is 1:16 to 1:17, for example 60 grams of coffee per liter of water. Brew time is about 4 to 6 minutes depending on the machine. Drip coffee is balanced and consistent with moderate body, which makes it a practical choice for brewing larger batches.
+
+Effect of grind size, water temperature, and extraction time
+These three variables control how much flavor is pulled from the grounds. Grind size sets the surface area exposed to water. Finer grounds extract faster and suit short brews like espresso, while coarser grounds extract slower and suit long steeps like French press and cold brew. A grind too fine for the method causes over-extraction and bitterness, while a grind too coarse causes under-extraction and sour, weak flavor.
+
+Water temperature affects extraction speed. The common range for hot brewing is 90 to 96 degrees Celsius. Hotter water extracts faster and can pull out bitter compounds, while cooler water extracts more slowly and can leave the cup sour and thin.
+
+Extraction time is how long water contacts the grounds. Too little time under-extracts and yields sour, salty, weak coffee. Too much time over-extracts and yields bitter, harsh, hollow coffee. The goal is balanced extraction, where sweetness and acidity sit in proportion. Grind size, temperature, and time work together, so adjusting one often requires adjusting the others.
