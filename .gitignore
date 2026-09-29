@@ -1,4 +1,4 @@
-# uv lockfile — not versioned; deps are frozen in requirements.txt
+# deps are frozen in requirements.txt
 uv.lock
 
 # Python
@@ -11,6 +11,10 @@ env/
 venv/
 ENV/
 .venv
+*.egg-info/
+
+# Build artifacts
+index/
 
 # IDE
 .vscode/
@@ -24,3 +28,6 @@ Thumbs.db
 
 # Streamlit
 .streamlit/
+
+# Local env overrides; .env.example is committed
+.env

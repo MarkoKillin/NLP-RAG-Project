@@ -1,0 +1,36 @@
+country,capital,continent,population,official_language,currency
+United States,"Washington, D.C.",North America,335000000,English,US Dollar
+Canada,Ottawa,North America,40000000,English,Canadian Dollar
+Mexico,Mexico City,North America,129000000,Spanish,Mexican Peso
+Brazil,Brasilia,South America,216000000,Portuguese,Brazilian Real
+Argentina,Buenos Aires,South America,46000000,Spanish,Argentine Peso
+Colombia,Bogota,South America,52000000,Spanish,Colombian Peso
+Chile,Santiago,South America,19000000,Spanish,Chilean Peso
+Peru,Lima,South America,34000000,Spanish,Peruvian Sol
+United Kingdom,London,Europe,67000000,English,Pound Sterling
+France,Paris,Europe,68000000,French,Euro
+Germany,Berlin,Europe,84000000,German,Euro
+Spain,Madrid,Europe,48000000,Spanish,Euro
+Italy,Rome,Europe,59000000,Italian,Euro
+Poland,Warsaw,Europe,38000000,Polish,Polish Zloty
+Netherlands,Amsterdam,Europe,18000000,Dutch,Euro
+Sweden,Stockholm,Europe,10000000,Swedish,Swedish Krona
+Russia,Moscow,Europe,144000000,Russian,Russian Ruble
+Nigeria,Abuja,Africa,223000000,English,Nigerian Naira
+Egypt,Cairo,Africa,112000000,Arabic,Egyptian Pound
+South Africa,Pretoria,Africa,60000000,English,South African Rand
+Kenya,Nairobi,Africa,55000000,Swahili,Kenyan Shilling
+Ethiopia,Addis Ababa,Africa,126000000,Amharic,Ethiopian Birr
+Ghana,Accra,Africa,34000000,English,Ghanaian Cedi
+Morocco,Rabat,Africa,37000000,Arabic,Moroccan Dirham
+China,Beijing,Asia,1411000000,Mandarin Chinese,Renminbi
+India,New Delhi,Asia,1428000000,Hindi,Indian Rupee
+Japan,Tokyo,Asia,124000000,Japanese,Japanese Yen
+South Korea,Seoul,Asia,52000000,Korean,South Korean Won
+Indonesia,Jakarta,Asia,277000000,Indonesian,Indonesian Rupiah
+Saudi Arabia,Riyadh,Asia,37000000,Arabic,Saudi Riyal
+Turkey,Ankara,Asia,85000000,Turkish,Turkish Lira
+Vietnam,Hanoi,Asia,99000000,Vietnamese,Vietnamese Dong
+Thailand,Bangkok,Asia,72000000,Thai,Thai Baht
+Australia,Canberra,Oceania,26000000,English,Australian Dollar
+New Zealand,Wellington,Oceania,5000000,English,New Zealand Dollar

@@ -11,13 +11,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 ENV PYTHONPATH=/app:${PYTHONPATH}
-
-# Install from the committed, frozen requirements.txt (pinned versions, public
-# PyPI). Regenerate it with: uv export --no-dev --no-emit-project --no-hashes -o requirements.txt
 COPY requirements.txt ./
 RUN pip install --no-cache-dir --upgrade pip uv && \
     uv pip install --system --no-cache -r requirements.txt
-
 COPY . .
 RUN chmod +x /app/scripts/docker-entrypoint.sh
 

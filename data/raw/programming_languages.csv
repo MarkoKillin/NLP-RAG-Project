@@ -1,0 +1,28 @@
+language,year_created,creator,paradigm,typing,primary_use
+Fortran,1957,John Backus,imperative,static,scientific computing
+Lisp,1958,John McCarthy,functional,dynamic,artificial intelligence
+COBOL,1959,Grace Hopper,imperative,static,business applications
+C,1972,Dennis Ritchie,procedural,static,systems programming
+SQL,1974,"Donald Chamberlin and Raymond Boyce",declarative,static,database queries
+C++,1985,Bjarne Stroustrup,multi-paradigm,static,systems programming
+Objective-C,1984,"Brad Cox and Tom Love",object-oriented,static,apple platform development
+Perl,1987,Larry Wall,multi-paradigm,dynamic,text processing
+Haskell,1990,"Simon Peyton Jones and others",functional,static,academic and research
+Python,1991,Guido van Rossum,multi-paradigm,dynamic,general purpose scripting
+Ruby,1995,Yukihiro Matsumoto,object-oriented,dynamic,web development
+Java,1995,James Gosling,object-oriented,static,enterprise applications
+JavaScript,1995,Brendan Eich,multi-paradigm,dynamic,web development
+PHP,1995,Rasmus Lerdorf,imperative,dynamic,server-side web
+R,1993,"Ross Ihaka and Robert Gentleman",multi-paradigm,dynamic,statistical computing
+MATLAB,1984,Cleve Moler,imperative,dynamic,numerical computing
+C#,2000,Anders Hejlsberg,multi-paradigm,static,application development
+Scala,2004,Martin Odersky,multi-paradigm,static,data engineering
+Erlang,1986,Joe Armstrong,functional,dynamic,concurrent systems
+Clojure,2007,Rich Hickey,functional,dynamic,concurrent applications
+Go,2009,"Robert Griesemer, Rob Pike and Ken Thompson",concurrent,static,cloud services
+Rust,2010,Graydon Hoare,multi-paradigm,static,systems programming
+Kotlin,2011,JetBrains,multi-paradigm,static,android development
+Julia,2012,"Jeff Bezanson and others",multi-paradigm,dynamic,scientific computing
+TypeScript,2012,Anders Hejlsberg,multi-paradigm,static,web development
+Elixir,2011,Jose Valim,functional,dynamic,distributed systems
+Swift,2014,Chris Lattner,multi-paradigm,static,apple platform development

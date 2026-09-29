@@ -1,0 +1,27 @@
+Evaluating Language Systems
+
+Evaluation is the part of a language project that decides whether anything actually works. Reported gains that are not measured against a fixed test set and a clear metric are not results.
+
+Classification metrics
+
+For tasks with discrete labels, accuracy is the fraction of correct predictions. It is misleading when classes are imbalanced: a classifier that always predicts the majority class on a dataset that is ninety-five percent negative scores ninety-five percent while being useless. Precision is the fraction of predicted positives that are correct, recall is the fraction of actual positives that were found, and the F1 score is their harmonic mean. The harmonic mean is used rather than the arithmetic mean because it punishes a large gap between the two, so a system cannot score well by maximising one and ignoring the other.
+
+With more than two classes, the scores can be averaged in different ways. Macro averaging computes the metric per class and takes an unweighted mean, giving rare classes equal say. Micro averaging pools all decisions before computing the metric, which weights classes by frequency.
+
+Generation metrics
+
+Generated text has no single correct answer, which makes automatic scoring hard. BLEU compares a candidate against one or more references by counting overlapping n-grams, with a brevity penalty to stop short outputs from scoring well through precision alone. It was designed for machine translation and correlates poorly with human judgement on other tasks. ROUGE inverts the emphasis towards recall and is the standard for summarisation, where ROUGE-L uses the longest common subsequence rather than fixed n-grams.
+
+Both are surface-level: a paraphrase that shares no n-grams with the reference scores zero despite being correct. Embedding-based metrics such as BERTScore compare contextual representations instead of tokens, which handles paraphrase better but inherits whatever biases the underlying encoder has.
+
+Perplexity measures how well a language model predicts held-out text and is the exponential of the average negative log likelihood per token. Lower is better. It is only comparable between models that share a tokenizer, since a model that splits text into more tokens spreads the same probability mass over more predictions.
+
+Evaluating retrieval-augmented systems
+
+A retrieval-augmented system has two failure modes that must be measured separately. The retriever can fail to surface a passage containing the answer, in which case no generator can recover. The generator can be handed the right passage and still answer wrongly, either by misreading it or by falling back on parametric knowledge.
+
+Measuring the retriever needs relevance judgements linking each question to the passages that answer it, then recall at k and mean reciprocal rank over those judgements. Recall at k matters most in this setting, because any relevant passage missed at retrieval time is permanently lost to the generator.
+
+Measuring the generator needs a separate check of whether the answer is supported by the passages provided, often called faithfulness or groundedness. An answer can be factually true and still unfaithful if the supporting passages do not contain it, which usually indicates the model ignored its context.
+
+Test sets should be fixed before development begins, and the same split should not be used repeatedly to make design decisions, since that leaks the test set into the model through the researcher.

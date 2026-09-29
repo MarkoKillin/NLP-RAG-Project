@@ -1,0 +1,122 @@
+[
+  {
+    "question": "What value is the BM25 parameter b usually set to?",
+    "type": "lexical",
+    "must_contain": "usually 0.75",
+    "sources": ["information_retrieval.txt"]
+  },
+  {
+    "question": "What is the Porter stemmer used for?",
+    "type": "lexical",
+    "must_contain": "Porter stemmer",
+    "sources": ["information_retrieval.txt"]
+  },
+  {
+    "question": "What does negative sampling do in word2vec?",
+    "type": "lexical",
+    "must_contain": "negative sampling",
+    "sources": ["word_embeddings.txt"]
+  },
+  {
+    "question": "What does LoRA train instead of the full model weights?",
+    "type": "lexical",
+    "must_contain": "low-rank update matrices",
+    "sources": ["transformers.txt"]
+  },
+  {
+    "question": "What does ROUGE-L use instead of fixed n-grams?",
+    "type": "lexical",
+    "must_contain": "longest common subsequence",
+    "sources": ["evaluation_metrics.txt"]
+  },
+  {
+    "question": "What is FlashAttention for?",
+    "type": "lexical",
+    "must_contain": "FlashAttention",
+    "sources": ["transformers.txt"]
+  },
+  {
+    "question": "What is Reciprocal Rank Fusion?",
+    "type": "lexical",
+    "must_contain": "Reciprocal Rank Fusion",
+    "sources": ["information_retrieval.txt"]
+  },
+  {
+    "question": "What does FastText do about unseen words?",
+    "type": "lexical",
+    "must_contain": "character n-grams",
+    "sources": ["word_embeddings.txt"]
+  },
+  {
+    "question": "Why does a search system miss a document that says the same thing in different words?",
+    "type": "semantic",
+    "must_contain": "vocabulary mismatch",
+    "sources": ["information_retrieval.txt"]
+  },
+  {
+    "question": "Why does making the input twice as long cost four times as much to process?",
+    "type": "semantic",
+    "must_contain": "quadratic in sequence length",
+    "sources": ["transformers.txt"]
+  },
+  {
+    "question": "Why does the model need to be told what order the words came in?",
+    "type": "semantic",
+    "must_contain": "permutation invariant",
+    "sources": ["transformers.txt"]
+  },
+  {
+    "question": "What goes wrong when one label is far more common than the others?",
+    "type": "semantic",
+    "must_contain": "imbalanced",
+    "sources": ["evaluation_metrics.txt"]
+  },
+  {
+    "question": "How does a machine work out that two words mean roughly the same thing?",
+    "type": "semantic",
+    "must_contain": "similar contexts tend to have similar meanings",
+    "sources": ["word_embeddings.txt"]
+  },
+  {
+    "question": "Why is it a problem that one word can have two completely different meanings?",
+    "type": "semantic",
+    "must_contain": "polysemous",
+    "sources": ["word_embeddings.txt"]
+  },
+  {
+    "question": "Why should you not keep tuning your system against the same held-out data?",
+    "type": "semantic",
+    "must_contain": "leaks the test set",
+    "sources": ["evaluation_metrics.txt"]
+  },
+  {
+    "question": "Why is dividing by the square root of the dimension necessary in attention?",
+    "type": "mixed",
+    "must_contain": "square root of the key dimension",
+    "sources": ["transformers.txt"]
+  },
+  {
+    "question": "How is the F1 score calculated and why that way?",
+    "type": "mixed",
+    "must_contain": "harmonic mean",
+    "sources": ["evaluation_metrics.txt"]
+  },
+  {
+    "question": "What is an inverted index?",
+    "type": "mixed",
+    "must_contain": "inverted index",
+    "sources": ["information_retrieval.txt"]
+  },
+  {
+    "question": "What is named entity recognition?",
+    "type": "mixed",
+    "must_contain": "Named Entity Recognition",
+    "sources": ["sample_document.txt"]
+  },
+  {
+    "question": "Which retrieval failure can the generator never recover from?",
+    "type": "semantic",
+    "must_contain": "permanently lost to the generator",
+    "sources": ["evaluation_metrics.txt"]
+  }
+]
