@@ -42,6 +42,9 @@ pull_model() {
 pull_model "$CHAT_MODEL"
 pull_model "$EMBED_MODEL"
 
+echo "Downloading reranker model"
+python -m rag.reranker
+
 echo "Building index"
 python -m scripts.build_index
 

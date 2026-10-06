@@ -1,6 +1,7 @@
 import streamlit as st
 
 from rag.config import settings
+from rag.models import RETRIEVAL_MODES
 from rag.rag_agent import run_rag
 from rag.retriever import build_retrievers
 
@@ -32,7 +33,7 @@ if "messages" not in st.session_state:
 
 with st.sidebar:
     st.header("Configuration")
-    mode = st.selectbox("Retrieval mode", ["bm25", "vector", "hybrid"])
+    mode = st.selectbox("Retrieval mode", RETRIEVAL_MODES)
     top_k = st.slider(
         "Chunks retrieved (top_k)",
         min_value=1,
@@ -42,7 +43,8 @@ with st.sidebar:
     st.info(
         "**BM25.** Keyword search over stemmed words.\n\n"
         "**Vector.** Embedding similarity.\n\n"
-        "**Hybrid.** Reciprocal Rank Fusion of both rankings."
+        "**Hybrid.** Reciprocal Rank Fusion of both rankings.\n\n"
+        f"**Rerank.** Hybrid's top {settings.rerank_candidates}, re-scored by a cross-encoder."
     )
 
 for message in st.session_state.messages:

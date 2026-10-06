@@ -1,9 +1,10 @@
 from dataclasses import dataclass
-from typing import Literal, Protocol
+from typing import Literal, Protocol, get_args
 
 from pydantic import BaseModel, Field
 
-RetrievalMode = Literal["bm25", "vector", "hybrid"]
+RetrievalMode = Literal["bm25", "vector", "hybrid", "rerank"]
+RETRIEVAL_MODES: tuple[str, ...] = get_args(RetrievalMode)
 
 
 class RetrievedChunkModel(BaseModel):
@@ -29,6 +30,12 @@ class Retrievers:
     bm25: Retriever
     vector: Retriever
     hybrid: Retriever
+    rerank: Retriever
 
     def get(self, mode: RetrievalMode) -> Retriever:
-        return {"bm25": self.bm25, "vector": self.vector, "hybrid": self.hybrid}[mode]
+        return {
+            "bm25": self.bm25,
+            "vector": self.vector,
+            "hybrid": self.hybrid,
+            "rerank": self.rerank,
+        }[mode]

@@ -10,6 +10,7 @@ from rag.config import settings
 from rag.embedding_model import EmbeddingModel
 from rag.ingestion import INDEX_FILE, VECTORS_FILE
 from rag.models import RetrievedChunkModel, Retrievers
+from rag.reranker import CrossEncoderReranker
 
 
 @dataclass
@@ -105,6 +106,24 @@ class HybridRetriever:
         return [by_id[chunk_id].model_copy(update={"score": score}) for chunk_id, score in ordered]
 
 
+class RerankRetriever:
+    """Hybrid's top candidates, re-scored by a cross-encoder."""
+
+    def __init__(
+        self,
+        base: HybridRetriever,
+        reranker: CrossEncoderReranker,
+        candidates: int = settings.rerank_candidates,
+    ):
+        self.base = base
+        self.reranker = reranker
+        self.candidates = candidates
+
+    def search(self, query: str, top_k: int = 5) -> list[RetrievedChunkModel]:
+        chunks = self.base.search(query, top_k=max(top_k, self.candidates))
+        return self.reranker.rerank(query, chunks, top_k)
+
+
 def build_retrievers(
     index_dir: Path | None = None, index: LoadedIndex | None = None
 ) -> Retrievers:
@@ -112,4 +131,6 @@ def build_retrievers(
         index = load_index(index_dir or settings.index_dir)
     bm25 = BM25Retriever(index)
     vector = VectorRetriever(index, EmbeddingModel(settings.embedding_model_name))
-    return Retrievers(bm25=bm25, vector=vector, hybrid=HybridRetriever(bm25, vector))
+    hybrid = HybridRetriever(bm25, vector)
+    rerank = RerankRetriever(hybrid, CrossEncoderReranker())
+    return Retrievers(bm25=bm25, vector=vector, hybrid=hybrid, rerank=rerank)

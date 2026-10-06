@@ -1,15 +1,16 @@
 # RAG Chatbot
 
 A retrieval-augmented chatbot for an NLP and IR course. Ask it about the documents
-in `data/raw/`. It retrieves passages with BM25, vector search or a Reciprocal Rank
-Fusion of both, then a local Ollama model writes the answer and cites the passages
+in `data/raw/`. It retrieves passages with BM25, vector search, a Reciprocal Rank
+Fusion of both, or that fusion reranked by a cross-encoder run with Hugging Face
+`transformers`. A local Ollama model then writes the answer and cites the passages
 it used.
 
 ## Requirements
 
 - Docker with Docker Compose
 - 8 GB of memory available to Docker
-- About 10 GB of free disk for the images and models
+- About 11 GB of free disk for the images and models
 
 ## Installation
 
@@ -17,9 +18,10 @@ it used.
     cd NLP-RAG-Project
     docker compose up --build
 
-The first start downloads about 4 GB of models, `llama3.2:3b-instruct-q8_0` and
-`nomic-embed-text`. Then open http://localhost:8501 and pick a retrieval mode in
-the sidebar.
+The first start downloads about 4 GB of models: `llama3.2:3b-instruct-q8_0` and
+`nomic-embed-text` through Ollama, and the reranker
+`cross-encoder/ms-marco-MiniLM-L-6-v2` from Hugging Face. Then open
+http://localhost:8501 and pick a retrieval mode in the sidebar.
 
 Docker on macOS has no GPU access, so each answer takes about 20 seconds there.
 
@@ -52,7 +54,7 @@ that holds the answer.
 ## Project structure
 
     app/streamlit_app.py     Streamlit UI
-    rag/                     Chunking, BM25, embeddings, retrieval, answering
+    rag/                     Chunking, BM25, embeddings, retrieval, reranking, answering
     scripts/build_index.py   Builds the index from data/raw
     scripts/evaluate.py      Evaluation
     eval/questions.json      Labelled questions

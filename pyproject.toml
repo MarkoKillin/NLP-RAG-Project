@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "rag-chat"
 version = "0.1.0"
-description = "RAG chatbot with BM25 + vector search and Ollama"
+description = "RAG chatbot with BM25, vector search, cross-encoder reranking and Ollama"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -17,6 +17,8 @@ dependencies = [
     "requests>=2.32",
     "snowballstemmer>=3.0",
     "streamlit>=1.48",
+    "torch>=2.14",
+    "transformers>=5.19",
 ]
 
 [tool.setuptools.packages.find]

@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     rrf_k: int = Field(default=60, gt=0)
     hybrid_candidates: int = Field(default=50, ge=1)
 
+    reranker_model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"
+    rerank_candidates: int = Field(default=20, ge=1)
+
     embedding_model_name: str = "nomic-embed-text"
 
     ollama_base_url: str = "http://ollama:11434"

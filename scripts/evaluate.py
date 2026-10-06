@@ -18,7 +18,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from rag.bm25 import BM25Index
 from rag.config import settings
-from rag.models import Retriever, Retrievers
+from rag.models import RETRIEVAL_MODES, Retriever, Retrievers
 from rag.rag_agent import run_rag
 from rag.retriever import BM25Retriever, LoadedIndex, build_retrievers, load_index
 
@@ -155,8 +155,8 @@ def main() -> None:
     parser.add_argument(
         "--modes",
         nargs="+",
-        default=["bm25", "vector", "hybrid"],
-        choices=["bm25", "vector", "hybrid"],
+        default=list(RETRIEVAL_MODES),
+        choices=RETRIEVAL_MODES,
     )
     parser.add_argument("--questions", type=Path, default=DEFAULT_QUESTIONS)
     parser.add_argument("--index-dir", type=Path, default=settings.index_dir)

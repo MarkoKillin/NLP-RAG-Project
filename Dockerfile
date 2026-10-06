@@ -12,7 +12,9 @@ WORKDIR /app
 
 ENV PYTHONPATH=/app:${PYTHONPATH}
 COPY requirements.txt ./
+# CPU-only torch. The default PyPI build pulls in GBs of CUDA libraries on Linux.
 RUN pip install --no-cache-dir --upgrade pip uv && \
+    uv pip install --system --no-cache torch==2.14.1 --extra-index-url https://download.pytorch.org/whl/cpu && \
     uv pip install --system --no-cache -r requirements.txt
 COPY . .
 
