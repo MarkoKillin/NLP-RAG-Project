@@ -107,7 +107,7 @@ def score_grounding(
     for question, relevant in zip(questions, judgements):
         try:
             result = run_rag(question["question"], mode, retrievers, top_k=k)
-        except Exception as exc:  # noqa: BLE001 - one bad answer must not stop the run
+        except Exception as exc:  # one bad answer shouldn't stop the run
             print(f"  generation failed on {question['question']!r}: {exc}", file=sys.stderr)
             failures += 1
             retrievable = grounded = cited = 0.0

@@ -89,7 +89,7 @@ def run_rag(
 
     try:
         chunks = retrievers.get(mode).search(question, top_k=top_k)
-    except Exception as exc:  # noqa: BLE001 - wrapped for a user-safe message
+    except Exception as exc:
         raise RAGError(f"Retrieval failed: {exc}") from exc
 
     if not chunks:
