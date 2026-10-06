@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 RetrievalMode = Literal["bm25", "vector", "hybrid"]
 
@@ -16,8 +16,8 @@ class RetrievedChunkModel(BaseModel):
 
 class RAGResult(BaseModel):
     answer: str
-    retrieval_mode: RetrievalMode
     chunks: list[RetrievedChunkModel]
+    citations: list[int] = Field(default_factory=list)
 
 
 class Retriever(Protocol):

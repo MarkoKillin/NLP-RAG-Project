@@ -118,5 +118,77 @@
     "type": "semantic",
     "must_contain": "permanently lost to the generator",
     "sources": ["evaluation_metrics.txt"]
+  },
+  {
+    "question": "How many bars of pressure does espresso use?",
+    "type": "lexical",
+    "must_contain": "around 9 bars",
+    "sources": ["coffee_brewing.txt"]
+  },
+  {
+    "question": "What goes wrong if the coffee particles are too big for the brewing method?",
+    "type": "semantic",
+    "must_contain": "grind too coarse causes under-extraction",
+    "sources": ["coffee_brewing.txt"]
+  },
+  {
+    "question": "Who created Git and when?",
+    "type": "lexical",
+    "must_contain": "created by Linus Torvalds in 2005",
+    "sources": ["git_basics.md"]
+  },
+  {
+    "question": "How can I undo a commit that my teammates have already pulled?",
+    "type": "semantic",
+    "must_contain": "safe for changes already shared with others",
+    "sources": ["git_basics.md"]
+  },
+  {
+    "question": "What does HTTP status code 418 mean?",
+    "type": "lexical",
+    "must_contain": "a teapot cannot brew coffee",
+    "sources": ["http_status_codes.md"]
+  },
+  {
+    "question": "Which response tells a client it is sending requests too fast?",
+    "type": "semantic",
+    "must_contain": "being rate limited",
+    "sources": ["http_status_codes.md"]
+  },
+  {
+    "question": "How many confirmed moons does Saturn have?",
+    "type": "lexical",
+    "must_contain": "146 confirmed moons",
+    "sources": ["solar_system.txt"]
+  },
+  {
+    "question": "Which planet was found through calculations instead of by looking through a telescope?",
+    "type": "semantic",
+    "must_contain": "first planet found by mathematical prediction",
+    "sources": ["solar_system.txt"]
+  },
+  {
+    "question": "What is the capital of Kenya?",
+    "type": "table",
+    "must_contain": "country: Kenya | capital: Nairobi",
+    "sources": ["countries.csv"]
+  },
+  {
+    "question": "Who created the Lisp programming language?",
+    "type": "table",
+    "must_contain": "creator: John McCarthy",
+    "sources": ["programming_languages.csv"]
+  },
+  {
+    "question": "What is the chemical symbol for silver?",
+    "type": "table",
+    "must_contain": "element: Silver | symbol: Ag",
+    "sources": ["chemical_elements.xlsx"]
+  },
+  {
+    "question": "Who discovered polonium?",
+    "type": "table",
+    "must_contain": "element: Polonium | discovered_by: Marie and Pierre Curie",
+    "sources": ["chemical_elements.xlsx"]
   }
 ]

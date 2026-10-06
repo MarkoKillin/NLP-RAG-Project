@@ -15,13 +15,9 @@ COPY requirements.txt ./
 RUN pip install --no-cache-dir --upgrade pip uv && \
     uv pip install --system --no-cache -r requirements.txt
 COPY . .
-RUN chmod +x /app/scripts/docker-entrypoint.sh
 
 RUN mkdir -p data/raw index
 
 EXPOSE 8501
-
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:8501/_stcore/health || exit 1
 
 ENTRYPOINT ["bash", "/app/scripts/docker-entrypoint.sh"]

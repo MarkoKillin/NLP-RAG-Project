@@ -51,7 +51,7 @@ class BM25Index:
         if self.remove_stopwords:
             stop = _load_stopwords()
             stripped = [t for t in tokens if t not in stop]
-            # An all-stopword query ("what is it about?") would return nothing.
+            # Fall back to the raw tokens if everything was a stopword
             tokens = stripped or tokens
         if self.stem:
             tokens = _stem_all(tokens)

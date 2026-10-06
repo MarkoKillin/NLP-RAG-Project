@@ -1,19 +1,10 @@
-"""Retrieval evaluation.
-
-Scores each retrieval mode against the labelled questions in eval/questions.json
-and prints Recall@k, MRR@k and Hit@k, broken down by question type.
-
-Relevance comes from content, not from chunk ids. A chunk is relevant to a
-question if it comes from one of the listed sources and contains the
-`must_contain` string. Judgements then survive re-chunking and re-indexing, which
-chunk-id labels would not.
-
-Only the vector and hybrid modes need Ollama. `--modes bm25` runs offline.
-
+"""
+Prints Recall@k, MRR@k and Hit@k per retrieval mode, overall and per question type.
 Usage:
     python -m scripts.evaluate
     python -m scripts.evaluate --k 3 --modes bm25 vector
     python -m scripts.evaluate --ablation      # BM25 tokenizer ablation
+    python -m scripts.evaluate --grounding     # does the answer cite a relevant passage
 """
 
 import argparse
@@ -27,15 +18,14 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from rag.bm25 import BM25Index
 from rag.config import settings
-from rag.models import Retriever
-from rag.retriever import LoadedIndex, build_retrievers, load_index
+from rag.models import Retriever, Retrievers
+from rag.rag_agent import run_rag
+from rag.retriever import BM25Retriever, LoadedIndex, build_retrievers, load_index
 
 DEFAULT_QUESTIONS = Path(__file__).parent.parent / "eval" / "questions.json"
 
 
 def _normalize(text: str) -> str:
-    """Chunking joins words on single spaces, so a `must_contain` string that
-    spans a line break in the source file would never match the chunk text."""
     return re.sub(r"\s+", " ", text).strip().lower()
 
 
@@ -88,13 +78,6 @@ def print_table(title: str, rows: list[tuple[str, dict]], k: int, n: int) -> Non
 
 
 def run_ablation(index: LoadedIndex, questions, judgements, k: int) -> None:
-    """Score all four BM25 tokenizer settings in one run.
-
-    The on-disk index holds only one of them, but BM25 is cheap to rebuild in
-    memory, so this needs no re-indexing and no embeddings.
-    """
-    from rag.retriever import BM25Retriever
-
     rows = []
     for stem in (False, True):
         for remove_stopwords in (False, True):
@@ -110,8 +93,64 @@ def run_ablation(index: LoadedIndex, questions, judgements, k: int) -> None:
     print_table("BM25 tokenizer ablation", rows, k, len(questions))
 
 
+def score_grounding(
+    retrievers: Retrievers,
+    mode: str,
+    questions: list[dict],
+    judgements: list[set[int]],
+    k: int,
+) -> tuple[dict[str, float], dict[str, dict[str, float]], int]:
+    buckets: dict[str, dict[str, list[float]]] = defaultdict(
+        lambda: {"grounded": [], "retrievable": [], "cited": []}
+    )
+    failures = 0
+    for question, relevant in zip(questions, judgements):
+        try:
+            result = run_rag(question["question"], mode, retrievers, top_k=k)
+        except Exception as exc:  # noqa: BLE001 - one bad answer must not stop the run
+            print(f"  generation failed on {question['question']!r}: {exc}", file=sys.stderr)
+            failures += 1
+            retrievable = grounded = cited = 0.0
+        else:
+            retrieved_ids = {c.id for c in result.chunks}
+            cited_ids = {
+                result.chunks[c - 1].id
+                for c in result.citations
+                if 1 <= c <= len(result.chunks)
+            }
+            retrievable = 1.0 if retrieved_ids & relevant else 0.0
+            grounded = 1.0 if cited_ids & relevant else 0.0
+            cited = 1.0 if result.citations else 0.0
+
+        for bucket in ("all", question.get("type", "untyped")):
+            buckets[bucket]["grounded"].append(grounded)
+            buckets[bucket]["retrievable"].append(retrievable)
+            buckets[bucket]["cited"].append(cited)
+
+    summary = {
+        name: {metric: sum(vals) / len(vals) for metric, vals in metrics.items()}
+        for name, metrics in buckets.items()
+    }
+    return summary.pop("all"), summary, failures
+
+
+def print_grounding(title: str, rows: list[tuple[str, dict]], k: int, n: int) -> None:
+    label_width = max(len(label) for label, _ in rows)
+    print(f"\n{title}  (k={k}, {n} questions)")
+    print(
+        f"{'':<{label_width}}  {'Grounded':>9}  {'Retr':>6}  {'G|Retr':>7}  {'Cited':>6}"
+    )
+    print("-" * (label_width + 36))
+    for label, m in rows:
+        over_retr = m["grounded"] / m["retrievable"] if m["retrievable"] else 0.0
+        print(
+            f"{label:<{label_width}}  {m['grounded']:>9.3f}  {m['retrievable']:>6.3f}  "
+            f"{over_retr:>7.3f}  {m['cited']:>6.3f}"
+        )
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Evaluate retrieval quality.")
+    parser = argparse.ArgumentParser(description="Evaluate retrieval and answer grounding")
     parser.add_argument("--k", type=int, default=settings.top_k, help="Cutoff for the metrics.")
     parser.add_argument(
         "--modes",
@@ -124,7 +163,12 @@ def main() -> None:
     parser.add_argument(
         "--ablation",
         action="store_true",
-        help="Also compare BM25 tokenizer settings (stemming, stopword removal).",
+        help="run BM25 with stemming and stopword removal switched on and off",
+    )
+    parser.add_argument(
+        "--grounding",
+        action="store_true",
+        help="check whether generated answers cite a relevant passage",
     )
     args = parser.parse_args()
 
@@ -133,14 +177,12 @@ def main() -> None:
     print(f"Index: {len(index.chunks)} chunks from {args.index_dir}")
     print(f"BM25 tokenizer: stem={settings.bm25_stem}, remove_stopwords={settings.bm25_remove_stopwords}")
 
-    # A question whose `must_contain` matches nothing is a broken judgement, not
-    # a retrieval failure. Drop it loudly rather than scoring a guaranteed zero.
     judgements, usable = [], []
     for question in questions:
         relevant = relevant_ids(index.chunks, question)
         if not relevant:
             print(
-                f"  skipping (no chunk matches must_contain): {question['question']!r}",
+                f"  skipping, no chunk matches must_contain: {question['question']!r}",
                 file=sys.stderr,
             )
             continue
@@ -148,7 +190,7 @@ def main() -> None:
         usable.append(question)
 
     if not usable:
-        print("No usable questions. Check eval/questions.json against your corpus.")
+        print("no usable questions. Check eval/questions.json")
         sys.exit(1)
     print(f"Questions: {len(usable)}/{len(questions)} usable")
 
@@ -169,6 +211,32 @@ def main() -> None:
 
     if args.ablation:
         run_ablation(index, usable, judgements, args.k)
+
+    if args.grounding:
+        g_rows, g_by_type, failures = [], {}, 0
+        for mode in args.modes:
+            overall, per_type, mode_failures = score_grounding(
+                retrievers, mode, usable, judgements, args.k
+            )
+            g_rows.append((mode, overall))
+            g_by_type[mode] = per_type
+            failures += mode_failures
+
+        print_grounding("Answer grounding", g_rows, args.k, len(usable))
+        for type_name in type_names:
+            type_rows = [
+                (mode, g_by_type[mode][type_name])
+                for mode in args.modes
+                if type_name in g_by_type[mode]
+            ]
+            count = sum(1 for q in usable if q.get("type", "untyped") == type_name)
+            print_grounding(f"Answer grounding ({type_name})", type_rows, args.k, count)
+
+        if failures:
+            print(
+                f"\n{failures} of the generation calls failed and count as not grounded.",
+                file=sys.stderr,
+            )
 
 
 if __name__ == "__main__":

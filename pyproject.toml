@@ -9,7 +9,6 @@ description = "RAG chatbot with BM25 + vector search and Ollama"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "mypy>=1.11",
     "numpy>=2.2",
     "openpyxl>=3.1",
     "pandas>=2.2",
@@ -29,5 +28,6 @@ rag = ["stopwords.txt"]
 
 [dependency-groups]
 dev = [
+    "mypy>=1.11",
     "ruff",
 ]

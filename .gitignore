@@ -1,4 +1,4 @@
-# deps are frozen in requirements.txt
+# deps are pinned in requirements.txt
 uv.lock
 
 # Python
@@ -29,5 +29,5 @@ Thumbs.db
 # Streamlit
 .streamlit/
 
-# Local env overrides; .env.example is committed
+# Local settings, see .env.example
 .env

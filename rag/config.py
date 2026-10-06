@@ -22,18 +22,15 @@ class Settings(BaseSettings):
     top_k: int = Field(default=5, ge=1)
 
     bm25_stem: bool = True
-    bm25_remove_stopwords: bool = True
+    bm25_remove_stopwords: bool = False
 
     rrf_k: int = Field(default=60, gt=0)
-    hybrid_candidate_multiplier: int = Field(default=4, ge=1)
+    hybrid_candidates: int = Field(default=50, ge=1)
 
-    embedding_model_name: str = "hf.co/Snowflake/snowflake-arctic-embed-m-v1.5:BF16"
-
-    # arctic-embed is asymmetric so the query takes this prefix, set empty for a symmetric model.
-    embedding_query_prefix: str = "Represent this sentence for searching relevant passages: "
+    embedding_model_name: str = "nomic-embed-text"
 
     ollama_base_url: str = "http://ollama:11434"
-    ollama_model_name: str = "hf.co/google/gemma-2b-it"
+    ollama_model_name: str = "llama3.2:3b-instruct-q8_0"
 
     @field_validator("ollama_base_url")
     @classmethod
