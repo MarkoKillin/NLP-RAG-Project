@@ -13,7 +13,7 @@ st.title("RAG Chatbot")
 
 def render_sources(sources: list[dict], citations: list[int] | None = None) -> None:
     cited = set(citations or [])
-    count = f"{len(sources)}, {len(cited)} cited" if cited else f"{len(sources)}"
+    count = f"{len(sources)} retrieved, {len(cited)} cited" if cited else f"{len(sources)} retrieved"
     with st.expander(f"View sources ({count})"):
         for i, src in enumerate(sources, start=1):
             marker = "**[cited]** " if i in cited else ""

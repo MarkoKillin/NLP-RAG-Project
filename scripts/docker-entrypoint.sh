@@ -49,4 +49,7 @@ echo "Building index"
 python -m scripts.build_index
 
 echo "Starting Streamlit app"
-exec streamlit run app/streamlit_app.py --server.port=8501 --server.address=0.0.0.0
+# file watcher off: it pokes every loaded module, and transformers' lazy imports
+# blow up on it (torchvision errors in the log)
+exec streamlit run app/streamlit_app.py --server.port=8501 --server.address=0.0.0.0 \
+    --server.fileWatcherType=none

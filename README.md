@@ -1,61 +1,55 @@
 # RAG Chatbot
 
-A retrieval-augmented chatbot for an NLP and IR course. Ask it about the documents
-in `data/raw/`. It retrieves passages with BM25, vector search, a Reciprocal Rank
-Fusion of both, or that fusion reranked by a cross-encoder run with Hugging Face
-`transformers`. A local Ollama model then writes the answer and cites the passages
-it used.
+A retrieval-augmented chatbot for our NLP and IR course. Ask it about the
+documents in `data/raw/` and it answers with citations to the passages it used.
+
+It has four retrieval modes. BM25 is keyword search. Vector search compares
+`nomic-embed-text` embeddings. Hybrid fuses the two with Reciprocal Rank Fusion,
+and rerank re-scores hybrid's top 20 with a cross-encoder run through Hugging
+Face `transformers`. A local `llama3.2:3b` model in Ollama writes the answers.
+
+Slides on installing and using it are in `slides.pdf`.
 
 ## Requirements
 
 - Docker with Docker Compose
-- 8 GB of memory available to Docker
-- About 11 GB of free disk for the images and models
+- 8 GB of memory for Docker
+- About 11 GB of free disk
 
-## Installation
+No API keys needed. Everything runs locally.
+
+## Running
 
     git clone https://github.com/MarkoKillin/NLP-RAG-Project.git
     cd NLP-RAG-Project
     docker compose up --build
 
-The first start downloads about 4 GB of models: `llama3.2:3b-instruct-q8_0` and
-`nomic-embed-text` through Ollama, and the reranker
-`cross-encoder/ms-marco-MiniLM-L-6-v2` from Hugging Face. Then open
-http://localhost:8501 and pick a retrieval mode in the sidebar.
+The first start downloads about 4 GB of models, so give it a few minutes. Once
+the log says `Starting Streamlit app`, open http://localhost:8501, pick a mode
+in the sidebar and ask something. "View sources" under an answer shows the
+passages it came from.
 
-Docker on macOS has no GPU access, so each answer takes about 20 seconds there.
+On a Mac, Docker can't use the GPU, so each answer takes about 20 seconds.
 
-## Adding documents
+## Your own documents
 
-Put `.txt`, `.md`, `.csv` or `.xlsx` files in `data/raw/` and restart the app:
+Drop `.txt`, `.md`, `.csv` or `.xlsx` files into `data/raw/` and run
+`docker compose restart rag-app`. The app rebuilds the index on every start, and
+each table row becomes its own passage.
 
-    docker compose restart rag-app
+## Settings
 
-The app rebuilds the index on every start. Each table row becomes one passage.
-
-## Configuration
-
-Defaults are in `docker-compose.yml`. To change them, copy `.env.example` to `.env`,
-edit it, and run `docker compose up -d`.
+The defaults are in `docker-compose.yml`. To change one, copy `.env.example` to
+`.env`, edit it, and run `docker compose up -d`.
 
 ## Evaluation
 
-`eval/questions.json` holds labelled test questions. With the app running:
+With the app running:
 
     docker compose exec rag-app python -m scripts.evaluate --k 3
-    docker compose exec rag-app python -m scripts.evaluate --ablation
     docker compose exec rag-app python -m scripts.evaluate --grounding
 
-The first command prints Recall@k, MRR@k and Hit@k for each retrieval mode.
-`--ablation` adds BM25 runs with stemming and stopword removal switched on and off.
-`--grounding` runs the full pipeline and checks whether each answer cites a passage
-that holds the answer.
-
-## Project structure
-
-    app/streamlit_app.py     Streamlit UI
-    rag/                     Chunking, BM25, embeddings, retrieval, reranking, answering
-    scripts/build_index.py   Builds the index from data/raw
-    scripts/evaluate.py      Evaluation
-    eval/questions.json      Labelled questions
-    data/raw/                Documents
+The first scores each mode on the 32 questions in `eval/questions.json` with
+Recall@k, MRR@k and Hit@k. The second also generates answers and checks that
+they cite a passage containing the answer. Add `--ablation` to compare BM25 with
+and without stemming and stopword removal.

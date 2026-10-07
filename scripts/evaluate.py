@@ -119,7 +119,9 @@ def score_grounding(
                 if 1 <= c <= len(result.chunks)
             }
             retrievable = 1.0 if retrieved_ids & relevant else 0.0
-            grounded = 1.0 if cited_ids & relevant else 0.0
+            # a bare "[2][5]" cites a relevant passage but answers nothing
+            has_text = bool(re.sub(r"[\[\]\d,\s.]", "", result.answer))
+            grounded = 1.0 if has_text and cited_ids & relevant else 0.0
             cited = 1.0 if result.citations else 0.0
 
         for bucket in ("all", question.get("type", "untyped")):
